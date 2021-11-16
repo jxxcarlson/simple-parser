@@ -1,5 +1,16 @@
-module Token exposing (..)
+module Token exposing
+    ( Loc
+    , SimpleToken(..)
+    , Token(..)
+    , TokenType(..)
+    , run
+    , runS
+    , simplify
+    , stringValue
+    , type_
+    )
 
+import Array exposing (Array)
 import Parser.Advanced as Parser exposing (DeadEnd, Parser)
 import ParserTools exposing (Context, Problem)
 
@@ -7,19 +18,52 @@ import ParserTools exposing (Context, Problem)
 type Token
     = LBR Loc
     | RBR Loc
-    | F String Loc
-    | T String Loc
+    | S String Loc
     | W String Loc
     | Math String Loc
     | Code String Loc
     | TokenError (List (DeadEnd Context Problem)) Loc
 
 
+stringValue : Token -> String
+stringValue token =
+    case token of
+        LBR _ ->
+            "["
+
+        RBR _ ->
+            "]"
+
+        S str _ ->
+            str
+
+        W str _ ->
+            str
+
+        Math str _ ->
+            str
+
+        Code str _ ->
+            str
+
+        TokenError list _ ->
+            "tokenError"
+
+
+type TokenType
+    = TLBR
+    | TRBR
+    | TS
+    | TW
+    | TMath
+    | TCode
+    | TTokenError
+
+
 type SimpleToken
     = LBRS
     | RBRS
-    | FS String
-    | TS String
+    | SS String
     | WS String
     | MathS String
     | CodeS String
@@ -35,11 +79,8 @@ simplify token =
         RBR _ ->
             RBRS
 
-        F str _ ->
-            FS str
-
-        T str _ ->
-            TS str
+        S str _ ->
+            SS str
 
         W str _ ->
             WS str
@@ -54,6 +95,31 @@ simplify token =
             TokenErrorS list
 
 
+type_ : Token -> TokenType
+type_ token =
+    case token of
+        LBR _ ->
+            TLBR
+
+        RBR _ ->
+            TRBR
+
+        S str _ ->
+            TS
+
+        W str _ ->
+            TW
+
+        Math str _ ->
+            TMath
+
+        Code str _ ->
+            TCode
+
+        TokenError list _ ->
+            TTokenError
+
+
 length : Token -> Int
 length token =
     case token of
@@ -63,10 +129,7 @@ length token =
         RBR _ ->
             1
 
-        F str _ ->
-            String.length str
-
-        T str _ ->
+        S str _ ->
             String.length str
 
         Math str _ ->
@@ -87,26 +150,26 @@ type alias Loc =
 
 
 type alias State a =
-    { source : String, scanpointer : Int, sourceLength : Int, tokens : List a }
+    { source : String, scanpointer : Int, sourceLength : Int, tokens : Array a }
 
 
 init : String -> State a
 init str =
-    { source = str, scanpointer = 0, sourceLength = String.length str, tokens = [] }
+    { source = str, scanpointer = 0, sourceLength = String.length str, tokens = Array.empty }
 
 
 type alias TokenParser =
     Parser Context Problem Token
 
 
-run : String -> List Token
+run : String -> Array Token
 run source =
     loop (init source) nextStep
 
 
-runS : String -> List SimpleToken
+runS : String -> Array SimpleToken
 runS source =
-    loop (init source) nextStep |> List.map simplify
+    loop (init source) nextStep |> Array.map simplify
 
 
 {-|
@@ -127,10 +190,10 @@ get state start input =
             TokenError errorList { begin = start, end = start + 1 }
 
 
-nextStep : State Token -> Step (State Token) (List Token)
+nextStep : State Token -> Step (State Token) (Array Token)
 nextStep state =
     if state.scanpointer >= state.sourceLength then
-        Done (List.reverse state.tokens)
+        Done state.tokens
 
     else
         let
@@ -140,7 +203,7 @@ nextStep state =
             newScanPointer =
                 state.scanpointer + length token
         in
-        Loop { state | tokens = token :: state.tokens, scanpointer = newScanPointer }
+        Loop { state | tokens = Array.push token state.tokens, scanpointer = newScanPointer }
 
 
 type Step state a
@@ -204,7 +267,7 @@ rightBracketParser start =
 
 textParser start =
     ParserTools.text (\c -> not <| List.member c (' ' :: l1LanguageChars)) (\c -> not <| List.member c (' ' :: l1LanguageChars))
-        |> Parser.map (\data -> T data.content { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 
 mathParser : Int -> TokenParser
@@ -222,4 +285,4 @@ codeParser start =
 functionPartsParser : Int -> TokenParser
 functionPartsParser start =
     ParserTools.textWithEndSymbol " " Char.isAlphaNum (\c -> c /= ' ')
-        |> Parser.map (\data -> F data.content { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1 })
