@@ -16,8 +16,8 @@ import ParserTools exposing (Context, Problem)
 
 
 type Token
-    = LBR Loc
-    | RBR Loc
+    = LB Loc
+    | RB Loc
     | S String Loc
     | W String Loc
     | Math String Loc
@@ -28,10 +28,10 @@ type Token
 stringValue : Token -> String
 stringValue token =
     case token of
-        LBR _ ->
+        LB _ ->
             "["
 
-        RBR _ ->
+        RB _ ->
             "]"
 
         S str _ ->
@@ -51,8 +51,8 @@ stringValue token =
 
 
 type TokenType
-    = TLBR
-    | TRBR
+    = TLB
+    | TRB
     | TS
     | TW
     | TMath
@@ -61,8 +61,8 @@ type TokenType
 
 
 type SimpleToken
-    = LBRS
-    | RBRS
+    = LBS
+    | RBS
     | SS String
     | WS String
     | MathS String
@@ -73,11 +73,11 @@ type SimpleToken
 simplify : Token -> SimpleToken
 simplify token =
     case token of
-        LBR _ ->
-            LBRS
+        LB _ ->
+            LBS
 
-        RBR _ ->
-            RBRS
+        RB _ ->
+            RBS
 
         S str _ ->
             SS str
@@ -98,11 +98,11 @@ simplify token =
 type_ : Token -> TokenType
 type_ token =
     case token of
-        LBR _ ->
-            TLBR
+        LB _ ->
+            TLB
 
-        RBR _ ->
-            TRBR
+        RB _ ->
+            TRB
 
         S str _ ->
             TS
@@ -123,10 +123,10 @@ type_ token =
 length : Token -> Int
 length token =
     case token of
-        LBR _ ->
+        LB _ ->
             1
 
-        RBR _ ->
+        RB _ ->
             1
 
         S str _ ->
@@ -256,13 +256,13 @@ whiteSpaceParser start =
 leftBracketParser : Int -> TokenParser
 leftBracketParser start =
     ParserTools.text (\c -> c == '[') (\_ -> False)
-        |> Parser.map (\_ -> LBR { begin = start, end = start })
+        |> Parser.map (\_ -> LB { begin = start, end = start })
 
 
 rightBracketParser : Int -> TokenParser
 rightBracketParser start =
     ParserTools.text (\c -> c == ']') (\_ -> False)
-        |> Parser.map (\_ -> RBR { begin = start, end = start })
+        |> Parser.map (\_ -> RB { begin = start, end = start })
 
 
 textParser start =
