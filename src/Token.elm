@@ -10,7 +10,6 @@ module Token exposing
     , type_
     )
 
-import Array exposing (Array)
 import Parser.Advanced as Parser exposing (DeadEnd, Parser)
 import ParserTools exposing (Context, Problem)
 
@@ -150,26 +149,26 @@ type alias Loc =
 
 
 type alias State a =
-    { source : String, scanpointer : Int, sourceLength : Int, tokens : Array a }
+    { source : String, scanpointer : Int, sourceLength : Int, tokens : List a }
 
 
 init : String -> State a
 init str =
-    { source = str, scanpointer = 0, sourceLength = String.length str, tokens = Array.empty }
+    { source = str, scanpointer = 0, sourceLength = String.length str, tokens = [] }
 
 
 type alias TokenParser =
     Parser Context Problem Token
 
 
-run : String -> Array Token
+run : String -> List Token
 run source =
     loop (init source) nextStep
 
 
-runS : String -> Array SimpleToken
+runS : String -> List SimpleToken
 runS source =
-    loop (init source) nextStep |> Array.map simplify
+    loop (init source) nextStep |> List.map simplify
 
 
 {-|
@@ -190,7 +189,7 @@ get state start input =
             TokenError errorList { begin = start, end = start + 1 }
 
 
-nextStep : State Token -> Step (State Token) (Array Token)
+nextStep : State Token -> Step (State Token) (List Token)
 nextStep state =
     if state.scanpointer >= state.sourceLength then
         Done state.tokens
@@ -203,7 +202,7 @@ nextStep state =
             newScanPointer =
                 state.scanpointer + length token
         in
-        Loop { state | tokens = Array.push token state.tokens, scanpointer = newScanPointer }
+        Loop { state | tokens = token :: state.tokens, scanpointer = newScanPointer }
 
 
 type Step state a
