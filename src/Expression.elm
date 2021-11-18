@@ -17,6 +17,7 @@ type Expr
     | StringExpr String Loc
     | MathExpr String Loc
     | CodeExpr String Loc
+    | EV Expr
 
 
 type ExprS
@@ -26,6 +27,7 @@ type ExprS
     | StringExprS String
     | MathExprS String
     | CodeExprS String
+    | EVS ExprS
 
 
 type alias State =
@@ -187,26 +189,12 @@ reduceState state =
 reduceStateM : State -> State
 reduceStateM state =
     let
-        finalize : List (Either Token Expr) -> Expr
-        finalize list =
-            let
-                finalList =
-                    (reduce list).result
-            in
-            case finalList of
-                item :: [] ->
-                    case item of
-                        Left _ ->
-                            StringExpr "Error: token instead of expression" { begin = 0, end = 0 }
-
-                        Right expr ->
-                            expr
-
-                _ ->
-                    StringExpr ("Error: final list has more than one item: " ++ Debug.toString finalList) { begin = 0, end = 0 }
+        finalExpr : Expr
+        finalExpr =
+            (reduce state.stack).result |> List.map unevaluated |> apply |> Debug.log "FINAL"
 
         committed =
-            finalize state.stack :: state.committed
+            finalExpr :: state.committed
 
         stack =
             if state.bracketCount == 0 then
@@ -216,10 +204,6 @@ reduceStateM state =
                 state.stack
     in
     { state | stack = stack, committed = committed }
-
-
-
--- |> (\st -> {st | step = st.step + 1})
 
 
 reduce : List (Either Token Expr) -> { rule : Rule, result : List (Either Token Expr) }
@@ -260,24 +244,92 @@ reduce list =
         -- Rule M
         (Left (RB meta)) :: rest ->
             let
-                _ =
-                    Debug.log "RULE" 'M'
-
-                prefix_ =
-                    prefix rest
+                prefix =
+                    List.Extra.takeWhile (\t -> not (isLB t)) rest |> List.map evaluated |> Debug.log "PREFIX"
 
                 suffix =
-                    List.drop (List.length prefix_ + 1) rest
+                    List.drop (List.length prefix + 1) rest
             in
-            { rule = M, result = prefix_ ++ suffix }
+            { rule = M, result = prefix ++ suffix }
 
         _ ->
             { rule = NoRule, result = list }
 
 
-prefix : List (Either Token Expr) -> List (Either Token Expr)
-prefix stack =
-    List.Extra.takeWhile (\t -> not (isLB t)) stack
+dummyLoc =
+    { begin = 0, end = 0 }
+
+
+apply : List (Either Token Expr) -> Expr
+apply list_ =
+    let
+        list =
+            List.reverse list_
+    in
+    case List.head list of
+        Nothing ->
+            StringExpr "Error: empty list in function apply" dummyLoc
+
+        Just f ->
+            case f of
+                Right (FExpr name args_ meta) ->
+                    let
+                        args =
+                            List.foldl (\item acc -> makeArg item :: acc) args_ (List.drop 1 list)
+                                |> List.reverse
+                    in
+                    FExpr name args meta
+
+                _ ->
+                    StringExpr "Error: expected FExpr in first position" dummyLoc
+
+
+makeArg : Either Token Expr -> Expr
+makeArg item =
+    case item of
+        Right expr ->
+            expr
+
+        Left token ->
+            case token of
+                S str meta ->
+                    StringExpr str meta
+
+                W str meta ->
+                    StringExpr str meta
+
+                _ ->
+                    StringExpr "Error in converting token to expr" dummyLoc
+
+
+evaluated : Either Token Expr -> Either Token Expr
+evaluated item =
+    case item of
+        Left _ ->
+            item
+
+        Right (EV _) ->
+            item
+
+        Right expr ->
+            Right (EV expr)
+
+
+unevaluated : Either Token Expr -> Either Token Expr
+unevaluated item =
+    case item of
+        Left _ ->
+            item
+
+        Right (EV expr) ->
+            Right expr
+
+        Right expr ->
+            Right expr
+
+
+
+--Either.mapRight (\x -> EV x) item
 
 
 isLB : Either Token Expr -> Bool
@@ -354,6 +406,9 @@ simplify expr =
 
         CodeExpr str loc ->
             CodeExprS str
+
+        EV expr_ ->
+            EVS (simplify expr_)
 
 
 type alias StackItem =
