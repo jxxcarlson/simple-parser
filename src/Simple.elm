@@ -1,4 +1,4 @@
-module Simplify exposing (..)
+module Simple exposing (parse, tokenize)
 
 import Either exposing (Either(..))
 import Expression exposing (Expr(..), State)
@@ -34,13 +34,13 @@ type SimpleToken
     | TokenErrorS (List (DeadEnd Context Problem))
 
 
-runS : String -> List SimpleToken
-runS str =
+tokenize : String -> List SimpleToken
+tokenize str =
     Token.run str |> List.map simplifyToken
 
 
-parseS : String -> StateS
-parseS str =
+parse : String -> StateS
+parse str =
     Expression.parse str |> toStateS
 
 
