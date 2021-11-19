@@ -13,6 +13,10 @@ import Parser.Advanced as Parser exposing (DeadEnd, Parser)
 import ParserTools exposing (Context, Problem)
 
 
+
+-- TYPES
+
+
 type Token
     = LB Loc
     | RB Loc
@@ -22,26 +26,16 @@ type Token
     | TokenError (List (DeadEnd Context Problem)) Loc
 
 
-stringValue : Token -> String
-stringValue token =
-    case token of
-        LB _ ->
-            "["
+type alias Loc =
+    { begin : Int, end : Int }
 
-        RB _ ->
-            "]"
 
-        S str _ ->
-            str
-
-        W str _ ->
-            str
-
-        VerbatimToken _ str _ ->
-            str
-
-        TokenError _ _ ->
-            "tokenError"
+type alias State a =
+    { source : String
+    , scanpointer : Int
+    , sourceLength : Int
+    , tokens : List a
+    }
 
 
 type TokenType
@@ -75,6 +69,28 @@ type_ token =
             TTokenError
 
 
+stringValue : Token -> String
+stringValue token =
+    case token of
+        LB _ ->
+            "["
+
+        RB _ ->
+            "]"
+
+        S str _ ->
+            str
+
+        W str _ ->
+            str
+
+        VerbatimToken _ str _ ->
+            str
+
+        TokenError _ _ ->
+            "tokenError"
+
+
 length : Token -> Int
 length token =
     case token of
@@ -95,14 +111,6 @@ length token =
 
         TokenError _ _ ->
             3
-
-
-type alias Loc =
-    { begin : Int, end : Int }
-
-
-type alias State a =
-    { source : String, scanpointer : Int, sourceLength : Int, tokens : List a }
 
 
 init : String -> State a
@@ -210,7 +218,7 @@ mathParser start =
 
 codeParser : Int -> TokenParser
 codeParser start =
-    ParserTools.textWithEndSymbol "`$`" (\c -> c == '`') (\c -> c /= '`')
+    ParserTools.textWithEndSymbol "`" (\c -> c == '`') (\c -> c /= '`')
         |> Parser.map (\data -> VerbatimToken "code" data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 

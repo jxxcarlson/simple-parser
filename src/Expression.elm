@@ -167,7 +167,6 @@ push token state =
 -- REDUCE
 
 
-reduceState : State -> State
 reduceState state =
     let
         reduction =
