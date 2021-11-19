@@ -95,10 +95,6 @@ parse str =
     run (init str)
 
 
-viewStack state =
-    state |> .stack |> simplifyStack |> List.reverse
-
-
 simplifyStack : List (Either Token Expr) -> List (Either SimpleToken ExprS)
 simplifyStack stack =
     List.map (Either.mapBoth Token.simplify simplify) stack
@@ -151,17 +147,10 @@ nextStep state =
                     Done state
 
         Just token ->
-            let
-                _ =
-                    Debug.log "=====" (state.step + 1)
-
-                _ =
-                    Debug.log "Token" token
-            in
             pushToken token state
-                |> displayState1
+                --|> displayState1
                 |> reduceState
-                |> displayState2
+                --  |> displayState2
                 |> (\st -> { st | step = st.step + 1 })
                 |> Loop
 
@@ -191,7 +180,7 @@ reduceStateM state =
     let
         finalExpr : Expr
         finalExpr =
-            (reduce state.stack).result |> List.map unevaluated |> apply |> Debug.log "FINAL"
+            (reduce state.stack).result |> List.map unevaluated |> apply
 
         committed =
             finalExpr :: state.committed
@@ -209,43 +198,22 @@ reduceStateM state =
 reduce : List (Either Token Expr) -> { rule : Rule, result : List (Either Token Expr) }
 reduce list =
     case list of
-        -- Rule F
         (Left (S name meta2)) :: (Left (LB meta1)) :: rest ->
-            let
-                _ =
-                    Debug.log "RULE" 'F'
-            in
             { rule = F, result = Right (FExpr name [] { begin = meta1.begin, end = meta2.end }) :: List.drop 1 list }
 
-        -- Rule A1
         (Left (S content meta2)) :: (Right (FExpr name exprs meta1)) :: rest ->
-            let
-                _ =
-                    Debug.log "RULE" "A1"
-            in
             { rule = A1, result = Right (FExpr name (StringExpr content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
-        -- Rule A2
         (Left (W content meta2)) :: (Right (FExpr name exprs meta1)) :: rest ->
-            let
-                _ =
-                    Debug.log "RULE" "A2"
-            in
             { rule = A2, result = Right (FExpr name (StringExpr content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
-        -- Rule A3
         (Right (FExpr name2 exprs2 meta2)) :: (Right (FExpr name1 exprs1 meta1)) :: rest ->
-            let
-                _ =
-                    Debug.log "RULE" "A3"
-            in
             { rule = A3, result = Right (FExpr name1 (exprs1 ++ [ FExpr name2 exprs2 meta2 ]) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
-        -- Rule M
         (Left (RB meta)) :: rest ->
             let
                 prefix =
-                    List.Extra.takeWhile (\t -> not (isLB t)) rest |> List.map evaluated |> Debug.log "PREFIX"
+                    List.Extra.takeWhile (\t -> not (isLB t)) rest |> List.map evaluated
 
                 suffix =
                     List.drop (List.length prefix + 1) rest
@@ -326,10 +294,6 @@ unevaluated item =
 
         Right expr ->
             Right expr
-
-
-
---Either.mapRight (\x -> EV x) item
 
 
 isLB : Either Token Expr -> Bool
@@ -462,15 +426,9 @@ displayState2 state =
             Debug.log "stack" (state.stack |> simplifyStack)
 
         _ =
-            Debug.log "(N, P, B)" ( List.length state.stack, state.stackPointer, state.bracketCount )
+            Debug.log "(N, B)" ( List.length state.stack, state.bracketCount )
 
         _ =
             Debug.log "committed" (state.committed |> List.map simplify)
     in
     state
-
-
-
---
---type FExpr
---    = F String (List Expr) Loc
