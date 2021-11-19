@@ -11,20 +11,10 @@ import Token exposing (Loc, Token(..), TokenType(..), run)
 
 type Expr
     = Expr String (List Expr) Loc
-    | L (List Expr)
     | Text String Loc
     | Verbatim String String Loc
     | EV Expr
     | Error String
-
-
-
---type Expr
---       = Text String Token.Loc
---       | Verbatim String String Token.Loc
---    | Arg (List Expr) Token.Loc
---       | Expr String (List Expr) Token.Loc
---    | Error String
 
 
 type alias State =

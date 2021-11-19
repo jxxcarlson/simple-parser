@@ -9,7 +9,6 @@ import Token exposing (Token(..))
 
 type ExprS
     = ExprS String (List ExprS)
-    | LS (List ExprS)
     | TextS String
     | VerbatimS String String
     | EVS ExprS
@@ -86,9 +85,6 @@ simplify expr =
     case expr of
         Expr str expresssions loc ->
             ExprS str (List.map simplify expresssions)
-
-        L expressions ->
-            LS (List.map simplify expressions)
 
         Text str loc ->
             TextS str
