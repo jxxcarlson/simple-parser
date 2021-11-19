@@ -2,27 +2,8 @@ module Expression exposing
     ( Expr(..)
     , Rule(..)
     , State
-    , Step(..)
-    , apply
-    , commit
-    , dummyLoc
-    , evaluated
-    , exprOfToken
-    , init
-    , isLB
-    , loop
-    , makeArg
-    , nextStep
     , parse
-    , push
-    , pushLeft
-    , pushOrCommit
-    , pushToken
-    , reduce
-    , reduceState
-    , reduceStateM
     , run
-    , unevaluated
     )
 
 import Either exposing (Either(..))
