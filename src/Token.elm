@@ -40,7 +40,7 @@ stringValue token =
         VerbatimToken _ str _ ->
             str
 
-        TokenError list _ ->
+        TokenError _ _ ->
             "tokenError"
 
 
@@ -71,7 +71,7 @@ type_ token =
         VerbatimToken _ _ _ ->
             TVerbatim
 
-        TokenError list _ ->
+        TokenError _ _ ->
             TTokenError
 
 
@@ -93,7 +93,7 @@ length token =
         W str _ ->
             String.length str
 
-        TokenError data _ ->
+        TokenError _ _ ->
             3
 
 

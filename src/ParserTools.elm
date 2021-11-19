@@ -20,10 +20,6 @@ type Context
     = TextExpression
 
 
-type alias ErrorData =
-    List (Parser.DeadEnd Context Problem)
-
-
 type alias Parser a =
     Parser.Parser Context Problem a
 

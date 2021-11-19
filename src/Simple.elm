@@ -1,6 +1,6 @@
 module Simple exposing (parse, tokenize)
 
-import Either exposing (Either(..))
+import Either exposing (Either)
 import Expression exposing (Expr(..), State)
 import Parser.Advanced exposing (DeadEnd)
 import ParserTools exposing (Context, Problem)
@@ -83,13 +83,13 @@ simplifyStack stack =
 simplify : Expr -> ExprS
 simplify expr =
     case expr of
-        Expr str expresssions loc ->
+        Expr str expresssions _ ->
             ExprS str (List.map simplify expresssions)
 
-        Text str loc ->
+        Text str _ ->
             TextS str
 
-        Verbatim name str loc ->
+        Verbatim name str _ ->
             VerbatimS name str
 
         EV expr_ ->
@@ -101,18 +101,3 @@ simplify expr =
 
 
 -- HELPERS
-
-
-type Step state a
-    = Loop state
-    | Done a
-
-
-loop : state -> (state -> Step state a) -> a
-loop s f =
-    case f s of
-        Loop s_ ->
-            loop s_ f
-
-        Done b ->
-            b

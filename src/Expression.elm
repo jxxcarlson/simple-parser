@@ -1,8 +1,33 @@
-module Expression exposing (..)
+module Expression exposing
+    ( Expr(..)
+    , Rule(..)
+    , State
+    , Step(..)
+    , apply
+    , commit
+    , dummyLoc
+    , evaluated
+    , exprOfToken
+    , init
+    , isLB
+    , loop
+    , makeArg
+    , nextStep
+    , parse
+    , push
+    , pushLeft
+    , pushOrCommit
+    , pushToken
+    , reduce
+    , reduceState
+    , reduceStateM
+    , run
+    , unevaluated
+    )
 
 import Either exposing (Either(..))
 import List.Extra
-import Token exposing (Loc, Token(..), TokenType(..), run)
+import Token exposing (Loc, Token(..), TokenType(..))
 
 
 
@@ -184,19 +209,19 @@ reduceState state =
 reduce : List (Either Token Expr) -> { rule : Rule, result : List (Either Token Expr) }
 reduce list =
     case list of
-        (Left (S name meta2)) :: (Left (LB meta1)) :: rest ->
+        (Left (S name meta2)) :: (Left (LB meta1)) :: _ ->
             { rule = F, result = Right (Expr name [] { begin = meta1.begin, end = meta2.end }) :: List.drop 1 list }
 
-        (Left (S content meta2)) :: (Right (Expr name exprs meta1)) :: rest ->
+        (Left (S content meta2)) :: (Right (Expr name exprs meta1)) :: _ ->
             { rule = A1, result = Right (Expr name (Text content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
-        (Left (W content meta2)) :: (Right (Expr name exprs meta1)) :: rest ->
+        (Left (W content meta2)) :: (Right (Expr name exprs meta1)) :: _ ->
             { rule = A2, result = Right (Expr name (Text content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
-        (Right (Expr name2 exprs2 meta2)) :: (Right (Expr name1 exprs1 meta1)) :: rest ->
+        (Right (Expr name2 exprs2 meta2)) :: (Right (Expr name1 exprs1 meta1)) :: _ ->
             { rule = A3, result = Right (Expr name1 (exprs1 ++ [ Expr name2 exprs2 meta2 ]) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
-        (Left (RB meta)) :: rest ->
+        (Left (RB _)) :: rest ->
             let
                 prefix =
                     List.Extra.takeWhile (\t -> not (isLB t)) rest |> List.map evaluated
