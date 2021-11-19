@@ -48,6 +48,10 @@ type Rule
     | NoRule
 
 
+
+-- STATE FOR THE PARSER
+
+
 init : String -> State
 init str =
     { step = 0
@@ -67,16 +71,6 @@ type alias StateS =
     }
 
 
-toStateS : State -> StateS
-toStateS state =
-    { step = state.step
-    , tokens = List.map Token.simplify state.tokens
-    , committed = List.map simplify state.committed
-    , stack = List.reverse <| simplifyStack state.stack
-    , bracketCount = state.bracketCount
-    }
-
-
 
 -- PARSER
 
@@ -91,15 +85,36 @@ parse str =
     run (init str)
 
 
-simplifyStack : List (Either Token Expr) -> List (Either SimpleToken ExprS)
-simplifyStack stack =
-    List.map (Either.mapBoth Token.simplify simplify) stack
-
-
 run : State -> State
 run state =
     loop state nextStep
         |> (\state_ -> { state_ | committed = List.reverse state_.committed })
+
+
+nextStep : State -> Step State State
+nextStep state =
+    case List.head state.tokens of
+        Nothing ->
+            let
+                state2 =
+                    reduceState state
+            in
+            case List.head state2.stack of
+                Just (Right expr) ->
+                    Done { state2 | committed = expr :: state.committed, stack = List.drop 1 state.stack }
+
+                _ ->
+                    Done state
+
+        Just token ->
+            pushToken token state
+                |> reduceState
+                |> (\st -> { st | step = st.step + 1 })
+                |> Loop
+
+
+
+-- PUSH
 
 
 pushToken : Token -> State -> State
@@ -127,26 +142,56 @@ pushToken token state =
             pushLeft token state
 
 
-nextStep : State -> Step State State
-nextStep state =
-    case List.head state.tokens of
+pushLeft : Token -> State -> State
+pushLeft token state =
+    { state | stack = Left token :: state.stack, tokens = List.drop 1 state.tokens }
+
+
+pushOrCommit : Token -> State -> State
+pushOrCommit token state =
+    if List.isEmpty state.stack then
+        commit token state
+
+    else
+        push token state
+
+
+commit : Token -> State -> State
+commit token state =
+    case exprOfToken token of
         Nothing ->
-            let
-                state2 =
-                    reduceState state
-            in
-            case List.head state2.stack of
-                Just (Right expr) ->
-                    Done { state2 | committed = expr :: state.committed, stack = List.drop 1 state.stack }
+            state
 
-                _ ->
-                    Done state
+        Just expr ->
+            { state | tokens = List.drop 1 state.tokens, committed = expr :: state.committed }
 
-        Just token ->
-            pushToken token state
-                |> reduceState
-                |> (\st -> { st | step = st.step + 1 })
-                |> Loop
+
+exprOfToken : Token -> Maybe Expr
+exprOfToken token =
+    case token of
+        S str loc ->
+            Just (StringExpr str loc)
+
+        W str loc ->
+            Just (StringExpr str loc)
+
+        Math str loc ->
+            Just (MathExpr str loc)
+
+        Code str loc ->
+            Just (CodeExpr str loc)
+
+        _ ->
+            Nothing
+
+
+push : Token -> State -> State
+push token state =
+    { state | tokens = List.drop 1 state.tokens, stack = Left token :: state.stack }
+
+
+
+-- REDUCE
 
 
 reduceState : State -> State
@@ -167,26 +212,6 @@ reduceState state =
 
     else
         { state | stack = reduction.result, bracketCount = bracketCount }
-
-
-reduceStateM : State -> State
-reduceStateM state =
-    let
-        finalExpr : Expr
-        finalExpr =
-            (reduce state.stack).result |> List.map unevaluated |> apply
-
-        committed =
-            finalExpr :: state.committed
-
-        stack =
-            if state.bracketCount == 0 then
-                []
-
-            else
-                state.stack
-    in
-    { state | stack = stack, committed = committed }
 
 
 reduce : List (Either Token Expr) -> { rule : Rule, result : List (Either Token Expr) }
@@ -218,8 +243,28 @@ reduce list =
             { rule = NoRule, result = list }
 
 
-dummyLoc =
-    { begin = 0, end = 0 }
+reduceStateM : State -> State
+reduceStateM state =
+    let
+        finalExpr : Expr
+        finalExpr =
+            (reduce state.stack).result |> List.map unevaluated |> apply
+
+        committed =
+            finalExpr :: state.committed
+
+        stack =
+            if state.bracketCount == 0 then
+                []
+
+            else
+                state.stack
+    in
+    { state | stack = stack, committed = committed }
+
+
+
+-- APPLY (HELPER FOR reduceM)
 
 
 apply : List (Either Token Expr) -> Expr
@@ -264,6 +309,10 @@ makeArg item =
                     StringExpr "Error in converting token to expr" dummyLoc
 
 
+
+-- EVALUATED AND UNEVALUATED (HELPERS FOR reduce and reduceM)
+
+
 evaluated : Either Token Expr -> Either Token Expr
 evaluated item =
     case item of
@@ -290,6 +339,10 @@ unevaluated item =
             Right expr
 
 
+
+-- HELPERS
+
+
 isLB : Either Token Expr -> Bool
 isLB stackItem =
     case stackItem of
@@ -300,33 +353,12 @@ isLB stackItem =
             Token.type_ token == TLB
 
 
-pushLeft : Token -> State -> State
-pushLeft token state =
-    { state | stack = Left token :: state.stack, tokens = List.drop 1 state.tokens }
+dummyLoc =
+    { begin = 0, end = 0 }
 
 
-pushOrCommit : Token -> State -> State
-pushOrCommit token state =
-    if List.isEmpty state.stack then
-        commit token state
 
-    else
-        push token state
-
-
-commit : Token -> State -> State
-commit token state =
-    case exprOfToken token of
-        Nothing ->
-            state
-
-        Just expr ->
-            { state | tokens = List.drop 1 state.tokens, committed = expr :: state.committed }
-
-
-push : Token -> State -> State
-push token state =
-    { state | tokens = List.drop 1 state.tokens, stack = Left token :: state.stack }
+-- LOOP
 
 
 type Step state a
@@ -342,6 +374,25 @@ loop s f =
 
         Done b ->
             b
+
+
+
+-- SIMPLIFIERS
+
+
+toStateS : State -> StateS
+toStateS state =
+    { step = state.step
+    , tokens = List.map Token.simplify state.tokens
+    , committed = List.map simplify state.committed
+    , stack = List.reverse <| simplifyStack state.stack
+    , bracketCount = state.bracketCount
+    }
+
+
+simplifyStack : List (Either Token Expr) -> List (Either SimpleToken ExprS)
+simplifyStack stack =
+    List.map (Either.mapBoth Token.simplify simplify) stack
 
 
 simplify : Expr -> ExprS
@@ -367,34 +418,3 @@ simplify expr =
 
         EV expr_ ->
             EVS (simplify expr_)
-
-
-type alias StackItem =
-    Either Token Expr
-
-
-type alias Stack =
-    Array StackItem
-
-
-exprOfToken : Token -> Maybe Expr
-exprOfToken token =
-    case token of
-        S str loc ->
-            Just (StringExpr str loc)
-
-        W str loc ->
-            Just (StringExpr str loc)
-
-        Math str loc ->
-            Just (MathExpr str loc)
-
-        Code str loc ->
-            Just (CodeExpr str loc)
-
-        _ ->
-            Nothing
-
-
-type Text
-    = T (List String)
