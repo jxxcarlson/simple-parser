@@ -32,7 +32,6 @@ type ExprS
 
 type alias State =
     { step : Int
-    , stackPointer : Int
     , tokens : List Token
     , committed : List Expr
     , stack : List (Either Token Expr)
@@ -52,7 +51,6 @@ type Rule
 init : String -> State
 init str =
     { step = 0
-    , stackPointer = 0
     , tokens = Token.run str |> List.reverse
     , committed = []
     , stack = []
@@ -62,7 +60,6 @@ init str =
 
 type alias StateS =
     { step : Int
-    , stackPointer : Int
     , tokens : List SimpleToken
     , committed : List ExprS
     , stack : List (Either SimpleToken ExprS)
@@ -73,7 +70,6 @@ type alias StateS =
 toStateS : State -> StateS
 toStateS state =
     { step = state.step
-    , stackPointer = state.stackPointer
     , tokens = List.map Token.simplify state.tokens
     , committed = List.map simplify state.committed
     , stack = List.reverse <| simplifyStack state.stack
@@ -148,9 +144,7 @@ nextStep state =
 
         Just token ->
             pushToken token state
-                --|> displayState1
                 |> reduceState
-                --  |> displayState2
                 |> (\st -> { st | step = st.step + 1 })
                 |> Loop
 
@@ -404,31 +398,3 @@ exprOfToken token =
 
 type Text
     = T (List String)
-
-
-
--- DEBUGGING
-
-
-displayState1 : State -> State
-displayState1 state =
-    let
-        _ =
-            Debug.log "tokens" (state.tokens |> List.map Token.simplify)
-    in
-    state
-
-
-displayState2 : State -> State
-displayState2 state =
-    let
-        _ =
-            Debug.log "stack" (state.stack |> simplifyStack)
-
-        _ =
-            Debug.log "(N, B)" ( List.length state.stack, state.bracketCount )
-
-        _ =
-            Debug.log "committed" (state.committed |> List.map simplify)
-    in
-    state
