@@ -1,9 +1,8 @@
 module Expression exposing (..)
 
-import Array exposing (Array)
 import Either exposing (Either(..))
 import List.Extra
-import Token exposing (Loc, SimpleToken(..), Token(..), TokenType(..), run)
+import Token exposing (Loc, Token(..), TokenType(..), run)
 
 
 
@@ -11,23 +10,21 @@ import Token exposing (Loc, SimpleToken(..), Token(..), TokenType(..), run)
 
 
 type Expr
-    = Text
-    | FExpr String (List Expr) Loc
+    = Expr String (List Expr) Loc
     | L (List Expr)
-    | StringExpr String Loc
-    | MathExpr String Loc
-    | CodeExpr String Loc
+    | Text String Loc
+    | Verbatim String String Loc
     | EV Expr
+    | Error String
 
 
-type ExprS
-    = TextS
-    | FExprS String (List ExprS)
-    | LS (List ExprS)
-    | StringExprS String
-    | MathExprS String
-    | CodeExprS String
-    | EVS ExprS
+
+--type Expr
+--       = Text String Token.Loc
+--       | Verbatim String String Token.Loc
+--    | Arg (List Expr) Token.Loc
+--       | Expr String (List Expr) Token.Loc
+--    | Error String
 
 
 type alias State =
@@ -62,22 +59,8 @@ init str =
     }
 
 
-type alias StateS =
-    { step : Int
-    , tokens : List SimpleToken
-    , committed : List ExprS
-    , stack : List (Either SimpleToken ExprS)
-    , bracketCount : Int
-    }
-
-
 
 -- PARSER
-
-
-parseS : String -> StateS
-parseS str =
-    parse str |> toStateS
 
 
 parse : String -> State
@@ -126,10 +109,7 @@ pushToken token state =
         W _ _ ->
             pushOrCommit token state
 
-        Math _ _ ->
-            pushOrCommit token state
-
-        Code _ _ ->
+        VerbatimToken _ _ _ ->
             pushOrCommit token state
 
         LB _ ->
@@ -170,16 +150,13 @@ exprOfToken : Token -> Maybe Expr
 exprOfToken token =
     case token of
         S str loc ->
-            Just (StringExpr str loc)
+            Just (Text str loc)
 
         W str loc ->
-            Just (StringExpr str loc)
+            Just (Text str loc)
 
-        Math str loc ->
-            Just (MathExpr str loc)
-
-        Code str loc ->
-            Just (CodeExpr str loc)
+        VerbatimToken name str loc ->
+            Just (Verbatim name str loc)
 
         _ ->
             Nothing
@@ -218,16 +195,16 @@ reduce : List (Either Token Expr) -> { rule : Rule, result : List (Either Token 
 reduce list =
     case list of
         (Left (S name meta2)) :: (Left (LB meta1)) :: rest ->
-            { rule = F, result = Right (FExpr name [] { begin = meta1.begin, end = meta2.end }) :: List.drop 1 list }
+            { rule = F, result = Right (Expr name [] { begin = meta1.begin, end = meta2.end }) :: List.drop 1 list }
 
-        (Left (S content meta2)) :: (Right (FExpr name exprs meta1)) :: rest ->
-            { rule = A1, result = Right (FExpr name (StringExpr content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
+        (Left (S content meta2)) :: (Right (Expr name exprs meta1)) :: rest ->
+            { rule = A1, result = Right (Expr name (Text content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
-        (Left (W content meta2)) :: (Right (FExpr name exprs meta1)) :: rest ->
-            { rule = A2, result = Right (FExpr name (StringExpr content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
+        (Left (W content meta2)) :: (Right (Expr name exprs meta1)) :: rest ->
+            { rule = A2, result = Right (Expr name (Text content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
-        (Right (FExpr name2 exprs2 meta2)) :: (Right (FExpr name1 exprs1 meta1)) :: rest ->
-            { rule = A3, result = Right (FExpr name1 (exprs1 ++ [ FExpr name2 exprs2 meta2 ]) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
+        (Right (Expr name2 exprs2 meta2)) :: (Right (Expr name1 exprs1 meta1)) :: rest ->
+            { rule = A3, result = Right (Expr name1 (exprs1 ++ [ Expr name2 exprs2 meta2 ]) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
         (Left (RB meta)) :: rest ->
             let
@@ -275,20 +252,20 @@ apply list_ =
     in
     case List.head list of
         Nothing ->
-            StringExpr "Error: empty list in function apply" dummyLoc
+            Text "Error: empty list in function apply" dummyLoc
 
         Just f ->
             case f of
-                Right (FExpr name args_ meta) ->
+                Right (Expr name args_ meta) ->
                     let
                         args =
                             List.foldl (\item acc -> makeArg item :: acc) args_ (List.drop 1 list)
                                 |> List.reverse
                     in
-                    FExpr name args meta
+                    Expr name args meta
 
                 _ ->
-                    StringExpr "Error: expected FExpr in first position" dummyLoc
+                    Text "Error: expected FExpr in first position" dummyLoc
 
 
 makeArg : Either Token Expr -> Expr
@@ -300,13 +277,13 @@ makeArg item =
         Left token ->
             case token of
                 S str meta ->
-                    StringExpr str meta
+                    Text str meta
 
                 W str meta ->
-                    StringExpr str meta
+                    Text str meta
 
                 _ ->
-                    StringExpr "Error in converting token to expr" dummyLoc
+                    Text "Error in converting token to expr" dummyLoc
 
 
 
@@ -374,47 +351,3 @@ loop s f =
 
         Done b ->
             b
-
-
-
--- SIMPLIFIERS
-
-
-toStateS : State -> StateS
-toStateS state =
-    { step = state.step
-    , tokens = List.map Token.simplify state.tokens
-    , committed = List.map simplify state.committed
-    , stack = List.reverse <| simplifyStack state.stack
-    , bracketCount = state.bracketCount
-    }
-
-
-simplifyStack : List (Either Token Expr) -> List (Either SimpleToken ExprS)
-simplifyStack stack =
-    List.map (Either.mapBoth Token.simplify simplify) stack
-
-
-simplify : Expr -> ExprS
-simplify expr =
-    case expr of
-        Text ->
-            TextS
-
-        FExpr str expresssions loc ->
-            FExprS str (List.map simplify expresssions)
-
-        L expressions ->
-            LS (List.map simplify expressions)
-
-        StringExpr str loc ->
-            StringExprS str
-
-        MathExpr str loc ->
-            MathExprS str
-
-        CodeExpr str loc ->
-            CodeExprS str
-
-        EV expr_ ->
-            EVS (simplify expr_)

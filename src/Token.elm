@@ -1,11 +1,10 @@
 module Token exposing
     ( Loc
-    , SimpleToken(..)
     , Token(..)
     , TokenType(..)
+    , init
+    , nextStep
     , run
-    , runS
-    , simplify
     , stringValue
     , type_
     )
@@ -19,8 +18,7 @@ type Token
     | RB Loc
     | S String Loc
     | W String Loc
-    | Math String Loc
-    | Code String Loc
+    | VerbatimToken String String Loc
     | TokenError (List (DeadEnd Context Problem)) Loc
 
 
@@ -39,10 +37,7 @@ stringValue token =
         W str _ ->
             str
 
-        Math str _ ->
-            str
-
-        Code str _ ->
+        VerbatimToken _ str _ ->
             str
 
         TokenError list _ ->
@@ -54,44 +49,8 @@ type TokenType
     | TRB
     | TS
     | TW
-    | TMath
-    | TCode
+    | TVerbatim
     | TTokenError
-
-
-type SimpleToken
-    = LBS
-    | RBS
-    | SS String
-    | WS String
-    | MathS String
-    | CodeS String
-    | TokenErrorS (List (DeadEnd Context Problem))
-
-
-simplify : Token -> SimpleToken
-simplify token =
-    case token of
-        LB _ ->
-            LBS
-
-        RB _ ->
-            RBS
-
-        S str _ ->
-            SS str
-
-        W str _ ->
-            WS str
-
-        Math str _ ->
-            MathS str
-
-        Code str _ ->
-            CodeS str
-
-        TokenError list _ ->
-            TokenErrorS list
 
 
 type_ : Token -> TokenType
@@ -103,17 +62,14 @@ type_ token =
         RB _ ->
             TRB
 
-        S str _ ->
+        S _ _ ->
             TS
 
-        W str _ ->
+        W _ _ ->
             TW
 
-        Math str _ ->
-            TMath
-
-        Code str _ ->
-            TCode
+        VerbatimToken _ _ _ ->
+            TVerbatim
 
         TokenError list _ ->
             TTokenError
@@ -131,10 +87,7 @@ length token =
         S str _ ->
             String.length str
 
-        Math str _ ->
-            String.length str
-
-        Code str _ ->
+        VerbatimToken _ str _ ->
             String.length str
 
         W str _ ->
@@ -164,11 +117,6 @@ type alias TokenParser =
 run : String -> List Token
 run source =
     loop (init source) nextStep
-
-
-runS : String -> List SimpleToken
-runS source =
-    loop (init source) nextStep |> List.map simplify
 
 
 {-|
@@ -203,21 +151,6 @@ nextStep state =
                 state.scanpointer + length token
         in
         Loop { state | tokens = token :: state.tokens, scanpointer = newScanPointer }
-
-
-type Step state a
-    = Loop state
-    | Done a
-
-
-loop : state -> (state -> Step state a) -> a
-loop s f =
-    case f s of
-        Loop s_ ->
-            loop s_ f
-
-        Done b ->
-            b
 
 
 {-| Expression.Tokenizer.tokenParser calls L1.tokenParser
@@ -272,16 +205,35 @@ textParser start =
 mathParser : Int -> TokenParser
 mathParser start =
     ParserTools.textWithEndSymbol "$" (\c -> c == '$') (\c -> c /= '$')
-        |> Parser.map (\data -> Math data.content { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> VerbatimToken "math" data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 
 codeParser : Int -> TokenParser
 codeParser start =
     ParserTools.textWithEndSymbol "`$`" (\c -> c == '`') (\c -> c /= '`')
-        |> Parser.map (\data -> Code data.content { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> VerbatimToken "code" data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 
 functionPartsParser : Int -> TokenParser
 functionPartsParser start =
     ParserTools.textWithEndSymbol " " Char.isAlphaNum (\c -> c /= ' ')
         |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1 })
+
+
+
+-- HELPERS
+
+
+type Step state a
+    = Loop state
+    | Done a
+
+
+loop : state -> (state -> Step state a) -> a
+loop s f =
+    case f s of
+        Loop s_ ->
+            loop s_ f
+
+        Done b ->
+            b
