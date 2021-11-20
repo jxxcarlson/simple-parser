@@ -190,19 +190,53 @@ reduce : List (Either Token Expr) -> { rule : Rule, result : List (Either Token 
 reduce list =
     case list of
         (Left (S name meta2)) :: (Left (LB meta1)) :: _ ->
+            let
+                _ =
+                    Debug.log "RULE" "F"
+
+                _ =
+                    Debug.log "stack" list
+            in
             { rule = F, result = Right (Expr name [] { begin = meta1.begin, end = meta2.end }) :: List.drop 1 list }
 
         (Left (S content meta2)) :: (Right (Expr name exprs meta1)) :: _ ->
+            let
+                _ =
+                    Debug.log "RULE" "A1"
+
+                _ =
+                    Debug.log "stack" list
+            in
             { rule = A1, result = Right (Expr name (Text content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
         (Left (W content meta2)) :: (Right (Expr name exprs meta1)) :: _ ->
+            let
+                _ =
+                    Debug.log "RULE" "A2"
+
+                _ =
+                    Debug.log "stack" list
+            in
             { rule = A2, result = Right (Expr name (Text content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
         (Right (Expr name2 exprs2 meta2)) :: (Right (Expr name1 exprs1 meta1)) :: _ ->
+            let
+                _ =
+                    Debug.log "RULE" "A3"
+
+                _ =
+                    Debug.log "stack" list
+            in
             { rule = A3, result = Right (Expr name1 (exprs1 ++ [ Expr name2 exprs2 meta2 ]) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
 
         (Left (RB _)) :: rest ->
             let
+                _ =
+                    Debug.log "RULE" "M"
+
+                _ =
+                    Debug.log "stack" ( List.length list, list )
+
                 prefix =
                     List.Extra.takeWhile (\t -> not (isLB t)) rest |> List.map evaluated
 
@@ -218,10 +252,14 @@ reduce list =
 reduceStateM : State -> State
 reduceStateM state =
     let
+        _ =
+            Debug.log "PENULTIMATE" state.stack
+
         finalExpr : Expr
         finalExpr =
             (reduce state.stack).result |> List.map unevaluated |> apply
 
+        -- apply
         committed =
             finalExpr :: state.committed
 
@@ -235,12 +273,22 @@ reduceStateM state =
     { state | stack = stack, committed = committed }
 
 
+eval : List (Either Token Expr) -> List (Either Token Expr)
+eval items =
+    items
+
+
 
 -- APPLY (HELPER FOR reduceM)
 
 
 apply : List (Either Token Expr) -> Expr
 apply list_ =
+    list_ |> Debug.log "apply (IN)" |> apply_ |> Debug.log "apply (OUT)"
+
+
+apply_ : List (Either Token Expr) -> Expr
+apply_ list_ =
     let
         list =
             List.reverse list_
@@ -268,6 +316,9 @@ makeArg item =
     case item of
         Right expr ->
             expr
+                |> Debug.log "makeArg (EXPR, INT)"
+                |> reverseArgs
+                |> Debug.log "makeArg (EXPR, OUT)"
 
         Left token ->
             case token of
@@ -279,6 +330,16 @@ makeArg item =
 
                 _ ->
                     Text "Error in converting token to expr" dummyLoc
+
+
+reverseArgs : Expr -> Expr
+reverseArgs expr =
+    case expr of
+        Expr name args loc ->
+            Expr name (List.reverse args) loc
+
+        _ ->
+            expr
 
 
 
