@@ -1,4 +1,4 @@
-module Expression exposing
+module Parser.Expression exposing
     ( Expr(..)
     , Rule(..)
     , State
@@ -8,7 +8,7 @@ module Expression exposing
 
 import Either exposing (Either(..))
 import List.Extra
-import Token exposing (Loc, Token(..), TokenType(..))
+import Parser.Token as Token exposing (Loc, Token(..), TokenType(..))
 
 
 

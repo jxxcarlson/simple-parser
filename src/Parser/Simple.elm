@@ -1,10 +1,10 @@
-module Simple exposing (parse, tokenize)
+module Parser.Simple exposing (ExprS(..), parse, tokenize)
 
 import Either exposing (Either)
-import Expression exposing (Expr(..), State)
 import Parser.Advanced exposing (DeadEnd)
-import ParserTools exposing (Context, Problem)
-import Token exposing (Token(..))
+import Parser.Expression as Expression exposing (Expr(..), State)
+import Parser.Token as Token exposing (Token(..))
+import Parser.Tools exposing (Context, Problem)
 
 
 type ExprS

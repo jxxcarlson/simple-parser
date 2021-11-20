@@ -1,4 +1,4 @@
-module ParserTools exposing
+module Parser.Tools exposing
     ( Context(..)
     , Problem(..)
     , Step(..)

@@ -39,7 +39,7 @@ type alias Loc =
     { begin : Int, end : Int }
 ```
 
-Here `LB` and `RB` stand for left and right-brackets, where `Loc` locates 
+Here `LB` and `RB` stand for left and right-brackets, and `Loc` locates 
 the substring tokenized in the source text; 
 `S` stands for string data, which in practice means "words" (no interior spaces)
 and `W` stands for whitespace.  A `Verbatim` token is for math or code.  Thus

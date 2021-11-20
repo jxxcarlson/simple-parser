@@ -1,4 +1,4 @@
-module Token exposing
+module Parser.Token exposing
     ( Loc
     , Token(..)
     , TokenType(..)
@@ -10,7 +10,7 @@ module Token exposing
     )
 
 import Parser.Advanced as Parser exposing (DeadEnd, Parser)
-import ParserTools exposing (Context, Problem)
+import Parser.Tools as PT exposing (Context, Problem)
 
 
 
@@ -189,42 +189,42 @@ tokenParser_ start =
 
 whiteSpaceParser : Int -> TokenParser
 whiteSpaceParser start =
-    ParserTools.text (\c -> c == ' ') (\c -> c == ' ')
+    PT.text (\c -> c == ' ') (\c -> c == ' ')
         |> Parser.map (\data -> W data.content { begin = start, end = start })
 
 
 leftBracketParser : Int -> TokenParser
 leftBracketParser start =
-    ParserTools.text (\c -> c == '[') (\_ -> False)
+    PT.text (\c -> c == '[') (\_ -> False)
         |> Parser.map (\_ -> LB { begin = start, end = start })
 
 
 rightBracketParser : Int -> TokenParser
 rightBracketParser start =
-    ParserTools.text (\c -> c == ']') (\_ -> False)
+    PT.text (\c -> c == ']') (\_ -> False)
         |> Parser.map (\_ -> RB { begin = start, end = start })
 
 
 textParser start =
-    ParserTools.text (\c -> not <| List.member c (' ' :: l1LanguageChars)) (\c -> not <| List.member c (' ' :: l1LanguageChars))
+    PT.text (\c -> not <| List.member c (' ' :: l1LanguageChars)) (\c -> not <| List.member c (' ' :: l1LanguageChars))
         |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 
 mathParser : Int -> TokenParser
 mathParser start =
-    ParserTools.textWithEndSymbol "$" (\c -> c == '$') (\c -> c /= '$')
+    PT.textWithEndSymbol "$" (\c -> c == '$') (\c -> c /= '$')
         |> Parser.map (\data -> VerbatimToken "math" data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 
 codeParser : Int -> TokenParser
 codeParser start =
-    ParserTools.textWithEndSymbol "`" (\c -> c == '`') (\c -> c /= '`')
+    PT.textWithEndSymbol "`" (\c -> c == '`') (\c -> c /= '`')
         |> Parser.map (\data -> VerbatimToken "code" data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 
 functionPartsParser : Int -> TokenParser
 functionPartsParser start =
-    ParserTools.textWithEndSymbol " " Char.isAlphaNum (\c -> c /= ' ')
+    PT.textWithEndSymbol " " Char.isAlphaNum (\c -> c /= ' ')
         |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 
