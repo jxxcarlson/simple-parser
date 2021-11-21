@@ -1,6 +1,5 @@
 module Parser.Expression exposing
     ( Expr(..)
-    , Rule(..)
     , State
     , parse
     , run
@@ -31,15 +30,6 @@ type alias State =
     , stack : List Token
     , bracketCount : Int
     }
-
-
-type Rule
-    = F
-    | A1
-    | A2
-    | A3
-    | M
-    | NoRule
 
 
 
