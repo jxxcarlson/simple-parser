@@ -268,8 +268,44 @@ evalList tokens =
             []
 
 
+errorTokens message =
+    -- [ LB dummyLoc, S "red" dummyLoc, S message dummyLoc, RB dummyLoc ] |> List.reverse
+    [ S message dummyLoc ]
+
+
+recoverFromError : State -> Step State State
 recoverFromError state =
-    Done state
+    let
+        _ =
+            Debug.log "ENTER recoverFromError" 1
+
+        oldSymbols =
+            toSymbols (List.reverse state.stack) |> Debug.log "OLD SYMBOLS"
+
+        newStack =
+            --  errorTokens "]" ++ [ RB dummyLoc ] ++ state.stack
+            -- [ RB dummyLoc ] ++ state.stack
+            [ RB dummyLoc ] ++ state.stack
+
+        newSymbols =
+            toSymbols (List.reverse newStack) |> Debug.log "NEW SYMBOLS"
+
+        reducible =
+            M.reducible newSymbols |> Debug.log "REDUCIBLE"
+    in
+    if reducible then
+        let
+            _ =
+                Debug.log "Entering Loop" "X"
+        in
+        Loop <| reduceState { state | stack = newStack, tokenIndex = state.tokenIndex - List.length state.stack, numberOfTokens = state.numberOfTokens + 1 }
+
+    else
+        let
+            _ =
+                Debug.log "Bailing out" "X"
+        in
+        Done { state | committed = Text "I could not fix the syntax error — missing right brace?" dummyLoc :: state.committed }
 
 
 reduce : List Token -> Either (List Token) Expr
