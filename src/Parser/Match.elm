@@ -7,6 +7,24 @@ type Symbol
     | O
 
 
+symbolToString : Symbol -> String
+symbolToString symbol =
+    case symbol of
+        L ->
+            "L"
+
+        R ->
+            "R"
+
+        O ->
+            "O"
+
+
+symbolsToString : List Symbol -> String
+symbolsToString symbols =
+    List.map symbolToString symbols |> String.join " "
+
+
 symbolIndex : Symbol -> Int
 symbolIndex symbol =
     case symbol of
