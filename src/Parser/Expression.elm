@@ -197,10 +197,10 @@ toSymbol2 token =
 
 reduceState : State -> State
 reduceState state =
-    if M.reducible (state.stack |> toSymbols |> List.reverse |> Debug.log "SYMBOLS") then
+    if M.reducible (state.stack |> toSymbols |> List.reverse) then
         let
             reducedStack =
-                eval (state.stack |> List.reverse |> Debug.log "STACK (before eval)") |> Debug.log "REDUCED STACK"
+                eval (state.stack |> List.reverse)
         in
         { state | stack = [], committed = reducedStack ++ state.committed }
 
@@ -215,10 +215,6 @@ unbracket list =
 
 eval : List Token -> List Expr
 eval tokens =
-    let
-        _ =
-            Debug.log "EVAL, TOKENS" tokens
-    in
     if
         List.map Token.type_ (List.take 1 tokens)
             == [ TLB ]
@@ -227,7 +223,7 @@ eval tokens =
     then
         let
             args =
-                unbracket tokens |> Debug.log "ARGS"
+                unbracket tokens
         in
         case List.head args of
             Just (S name meta) ->
@@ -249,35 +245,16 @@ evalList tokens =
         Just token ->
             case Token.type_ token of
                 TLB ->
-                    let
-                        _ =
-                            Debug.log "SYMBOLS" (toSymbols2 tokens)
-                    in
                     case M.match (toSymbols2 tokens) of
                         Nothing ->
                             [ Text "error on match" dummyLoc ]
 
                         Just k ->
                             let
-                                _ =
-                                    Debug.log "MATCH AT" k
-
                                 ( a, b ) =
-                                    M.splitAt (k + 1) (tokens |> Debug.log "TOKENS (EVALLIST, BEFORE)") |> Debug.log "TOKENS (EVALLIST, AFTER)"
-
-                                _ =
-                                    Debug.log "AAA" a
-
-                                _ =
-                                    Debug.log "BBB" b
-
-                                prefix =
-                                    eval a |> Debug.log "AAA, evaluated"
-
-                                suffix =
-                                    evalList b |> Debug.log "BBB, evaluated"
+                                    M.splitAt (k + 1) tokens
                             in
-                            prefix ++ suffix
+                            eval a ++ evalList b
 
                 _ ->
                     case exprOfToken token of
