@@ -28,7 +28,6 @@ type alias State =
     , tokens : List Token
     , committed : List Expr
     , stack : List Token
-    , bracketCount : Int
     }
 
 
@@ -42,7 +41,6 @@ init str =
     , tokens = Token.run str |> List.reverse
     , committed = []
     , stack = []
-    , bracketCount = 0
     }
 
 
@@ -91,7 +89,7 @@ pushToken token state =
             pushOrCommit token state
 
         LB _ ->
-            pushLeft token { state | bracketCount = state.bracketCount + 1 }
+            pushLeft token state
 
         RB _ ->
             pushLeft token state

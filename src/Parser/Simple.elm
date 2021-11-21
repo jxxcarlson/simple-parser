@@ -20,7 +20,6 @@ type alias StateS =
     , tokens : List SimpleToken
     , committed : List ExprS
     , stack : List SimpleToken
-    , bracketCount : Int
     }
 
 
@@ -49,7 +48,6 @@ toStateS state =
     , tokens = List.map simplifyToken state.tokens
     , committed = List.map simplify state.committed
     , stack = List.reverse <| simplifyStack state.stack
-    , bracketCount = state.bracketCount
     }
 
 
