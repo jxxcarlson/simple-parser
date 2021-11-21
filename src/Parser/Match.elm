@@ -1,28 +1,6 @@
 module Parser.Match exposing (..)
 
-
-type Symbol
-    = L
-    | R
-    | O
-
-
-symbolToString : Symbol -> String
-symbolToString symbol =
-    case symbol of
-        L ->
-            "L"
-
-        R ->
-            "R"
-
-        O ->
-            "O"
-
-
-symbolsToString : List Symbol -> String
-symbolsToString symbols =
-    List.map symbolToString symbols |> String.join " "
+import Parser.Symbol as Symbol exposing (Symbol(..))
 
 
 symbolIndex : Symbol -> Int

@@ -7,7 +7,8 @@ module Parser.Expression exposing
 
 import Either exposing (Either(..))
 import Maybe.Extra
-import Parser.Match as M exposing (Symbol(..))
+import Parser.Match as M
+import Parser.Symbol as Symbol exposing (Symbol(..))
 import Parser.Token as Token exposing (Loc, Token(..), TokenType(..))
 
 
@@ -159,45 +160,9 @@ push token state =
 -- REDUCE
 
 
-toSymbols : List Token -> List Symbol
-toSymbols tokens =
-    List.map toSymbol tokens |> Maybe.Extra.values
-
-
-toSymbols2 : List Token -> List Symbol
-toSymbols2 tokens =
-    List.map toSymbol2 tokens
-
-
-toSymbol : Token -> Maybe Symbol
-toSymbol token =
-    case token of
-        LB _ ->
-            Just L
-
-        RB _ ->
-            Just R
-
-        _ ->
-            Nothing
-
-
-toSymbol2 : Token -> Symbol
-toSymbol2 token =
-    case token of
-        LB _ ->
-            L
-
-        RB _ ->
-            R
-
-        _ ->
-            O
-
-
 reduceState : State -> State
 reduceState state =
-    if M.reducible (state.stack |> toSymbols |> List.reverse) then
+    if M.reducible (state.stack |> Symbol.convertTokens |> List.reverse) then
         let
             reducedStack =
                 eval (state.stack |> List.reverse)
@@ -245,7 +210,7 @@ evalList tokens =
         Just token ->
             case Token.type_ token of
                 TLB ->
-                    case M.match (toSymbols2 tokens) of
+                    case M.match (Symbol.convertTokens2 tokens) of
                         Nothing ->
                             [ Text "error on match" dummyLoc ]
 
@@ -285,7 +250,7 @@ recoverFromError state =
             [ RB dummyLoc ] ++ state.stack
 
         newSymbols =
-            toSymbols (List.reverse newStack)
+            Symbol.convertTokens (List.reverse newStack)
 
         reducible =
             M.reducible newSymbols
