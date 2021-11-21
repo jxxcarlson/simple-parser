@@ -25,6 +25,14 @@ idemTest label input =
                 |> Expect.equal input
 
 
+errorTest label input output =
+    test label <|
+        \_ ->
+            input
+                |> idem
+                |> Expect.equal output
+
+
 idem : String -> String
 idem str =
     str
@@ -52,5 +60,7 @@ suite =
             , idemTest "B7." "[f [g [h b]] c]"
             , idemTest "B8" "[f [g [h [i b]]] c]"
             , idemTest "B9" "$x$ a [f b]"
+            , idemTest "B10" "`x` a [f b]"
+            , errorTest "B11" "[f x" "[f x][red ] ]"
             ]
         ]

@@ -268,49 +268,33 @@ evalList tokens =
             []
 
 
-errorTokens message =
-    -- [ LB dummyLoc, S "red" dummyLoc, S message dummyLoc, RB dummyLoc ] |> List.reverse
-    [ S message dummyLoc ]
+errorMessage : String -> Expr
+errorMessage message =
+    Expr "red" [ Text message dummyLoc ] dummyLoc
+
+
+addErrorMessage : String -> State -> State
+addErrorMessage message state =
+    { state | committed = errorMessage message :: state.committed }
 
 
 recoverFromError : State -> Step State State
 recoverFromError state =
     let
-        _ =
-            Debug.log "ENTER recoverFromError" 1
-
-        oldSymbols =
-            toSymbols (List.reverse state.stack) |> Debug.log "OLD SYMBOLS"
-
         newStack =
-            --  errorTokens "]" ++ [ RB dummyLoc ] ++ state.stack
-            -- [ RB dummyLoc ] ++ state.stack
             [ RB dummyLoc ] ++ state.stack
 
         newSymbols =
-            toSymbols (List.reverse newStack) |> Debug.log "NEW SYMBOLS"
+            toSymbols (List.reverse newStack)
 
         reducible =
-            M.reducible newSymbols |> Debug.log "REDUCIBLE"
+            M.reducible newSymbols
     in
     if reducible then
-        let
-            _ =
-                Debug.log "Entering Loop" "X"
-        in
-        Loop <| reduceState { state | stack = newStack, tokenIndex = state.tokenIndex - List.length state.stack, numberOfTokens = state.numberOfTokens + 1 }
+        Done <| addErrorMessage " ] " <| reduceState <| { state | stack = newStack, tokenIndex = 0, numberOfTokens = List.length newStack }
 
     else
-        let
-            _ =
-                Debug.log "Bailing out" "X"
-        in
         Done { state | committed = Text "I could not fix the syntax error — missing right brace?" dummyLoc :: state.committed }
-
-
-reduce : List Token -> Either (List Token) Expr
-reduce stack =
-    Right (Text "done (ha ha)" { begin = 0, end = 0 })
 
 
 
