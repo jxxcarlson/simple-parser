@@ -61,7 +61,7 @@ deleteAt k list =
 -}
 splitAt : Int -> List a -> ( List a, List a )
 splitAt k list =
-    ( List.take k list, List.drop (k + 1) list )
+    ( List.take k list, List.drop (k + 0) list )
 
 
 type alias State =

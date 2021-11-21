@@ -2,7 +2,9 @@ module Parser.Token exposing
     ( Loc
     , Token(..)
     , TokenType(..)
+    , codeParser
     , init
+    , mathParser
     , nextStep
     , run
     , stringValue
@@ -94,23 +96,23 @@ stringValue token =
 length : Token -> Int
 length token =
     case token of
-        LB _ ->
-            1
+        LB meta ->
+            meta.end - meta.begin
 
-        RB _ ->
-            1
+        RB meta ->
+            meta.end - meta.begin
 
-        S str _ ->
-            String.length str
+        S _ meta ->
+            meta.end - meta.begin
 
-        VerbatimToken _ str _ ->
-            String.length str
+        VerbatimToken _ _ meta ->
+            meta.end - meta.begin
 
-        W str _ ->
-            String.length str
+        W _ meta ->
+            meta.end - meta.begin
 
-        TokenError _ _ ->
-            3
+        TokenError _ meta ->
+            meta.end - meta.begin
 
 
 init : String -> State a
@@ -156,7 +158,7 @@ nextStep state =
                 get state state.scanpointer (String.dropLeft state.scanpointer state.source)
 
             newScanPointer =
-                state.scanpointer + length token
+                state.scanpointer + length token + 1
         in
         Loop { state | tokens = token :: state.tokens, scanpointer = newScanPointer }
 
@@ -170,7 +172,7 @@ tokenParser _ start =
     tokenParser_ start
 
 
-l1LanguageChars =
+languageChars =
     [ '[', ']', '`', '$' ]
 
 
@@ -180,7 +182,6 @@ tokenParser_ start =
         [ textParser start
         , mathParser start
         , codeParser start
-        , functionPartsParser start
         , leftBracketParser start
         , rightBracketParser start
         , whiteSpaceParser start
@@ -206,20 +207,20 @@ rightBracketParser start =
 
 
 textParser start =
-    PT.text (\c -> not <| List.member c (' ' :: l1LanguageChars)) (\c -> not <| List.member c (' ' :: l1LanguageChars))
+    PT.text (\c -> not <| List.member c (' ' :: languageChars)) (\c -> not <| List.member c (' ' :: languageChars))
         |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1 })
 
 
 mathParser : Int -> TokenParser
 mathParser start =
     PT.textWithEndSymbol "$" (\c -> c == '$') (\c -> c /= '$')
-        |> Parser.map (\data -> VerbatimToken "math" data.content { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> VerbatimToken "math" (String.dropRight 1 (String.dropLeft 1 data.content)) { begin = start, end = start + data.end - data.begin - 1 })
 
 
 codeParser : Int -> TokenParser
 codeParser start =
     PT.textWithEndSymbol "`" (\c -> c == '`') (\c -> c /= '`')
-        |> Parser.map (\data -> VerbatimToken "code" data.content { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> VerbatimToken "code" (String.dropRight 1 (String.dropLeft 1 data.content)) { begin = start, end = start + data.end - data.begin - 1 })
 
 
 functionPartsParser : Int -> TokenParser

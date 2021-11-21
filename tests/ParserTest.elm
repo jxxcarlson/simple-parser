@@ -47,9 +47,10 @@ suite =
             , idemTest "B2." "[f a]"
             , idemTest "B3." "a [f b] c"
             , idemTest "B4." "[f [g a] b]"
-            , idemTest "B5." "[f a [g u v] [h x y]]" -- DEPTH 2 OK
-            , idemTest "B6." "[f [g [h b]]]" -- DEPTH 3 FAILS
+            , idemTest "B5." "[f a [g u v] [h x y]]"
+            , idemTest "B6." "[f [g [h b]]]"
             , idemTest "B7." "[f [g [h b]] c]"
-            , idemTest "B8" "[f[g [h [i b]]] c]"
+            , idemTest "B8" "[f [g [h [i b]]] c]"
+            , idemTest "B9" "$x$ a [f b]"
             ]
         ]

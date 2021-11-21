@@ -263,7 +263,7 @@ evalList tokens =
                                     Debug.log "MATCH AT" k
 
                                 ( a, b ) =
-                                    M.splitAt (k + 1) (tokens |> Debug.log "TOKENS (EVALLIST)")
+                                    M.splitAt (k + 1) (tokens |> Debug.log "TOKENS (EVALLIST, BEFORE)") |> Debug.log "TOKENS (EVALLIST, AFTER)"
 
                                 _ =
                                     Debug.log "AAA" a
