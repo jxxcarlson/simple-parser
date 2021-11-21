@@ -1,4 +1,4 @@
-module Parser.Simple exposing (ExprS(..), parse, tokenize)
+module Parser.Simple exposing (ExprS(..), parse, simplifyToken, tokenize)
 
 import Either exposing (Either)
 import Parser.Advanced exposing (DeadEnd)
@@ -19,7 +19,7 @@ type alias StateS =
     { step : Int
     , tokens : List SimpleToken
     , committed : List ExprS
-    , stack : List (Either SimpleToken ExprS)
+    , stack : List SimpleToken
     , bracketCount : Int
     }
 
@@ -75,9 +75,9 @@ simplifyToken token =
             TokenErrorS list
 
 
-simplifyStack : List (Either Token Expr) -> List (Either SimpleToken ExprS)
+simplifyStack : List Token -> List SimpleToken
 simplifyStack stack =
-    List.map (Either.mapBoth simplifyToken simplify) stack
+    List.map simplifyToken stack
 
 
 simplify : Expr -> ExprS

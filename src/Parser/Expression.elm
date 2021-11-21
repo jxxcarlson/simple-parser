@@ -7,7 +7,8 @@ module Parser.Expression exposing
     )
 
 import Either exposing (Either(..))
-import List.Extra
+import Maybe.Extra
+import Parser.Match as M exposing (Symbol(..))
 import Parser.Token as Token exposing (Loc, Token(..), TokenType(..))
 
 
@@ -27,7 +28,7 @@ type alias State =
     { step : Int
     , tokens : List Token
     , committed : List Expr
-    , stack : List (Either Token Expr)
+    , stack : List Token
     , bracketCount : Int
     }
 
@@ -74,16 +75,7 @@ nextStep : State -> Step State State
 nextStep state =
     case List.head state.tokens of
         Nothing ->
-            let
-                state2 =
-                    reduceState state
-            in
-            case List.head state2.stack of
-                Just (Right expr) ->
-                    Done { state2 | committed = expr :: state.committed, stack = List.drop 1 state.stack }
-
-                _ ->
-                    Done state
+            Done state
 
         Just token ->
             pushToken token state
@@ -120,7 +112,7 @@ pushToken token state =
 
 pushLeft : Token -> State -> State
 pushLeft token state =
-    { state | stack = Left token :: state.stack, tokens = List.drop 1 state.tokens }
+    { state | stack = token :: state.stack, tokens = List.drop 1 state.tokens }
 
 
 pushOrCommit : Token -> State -> State
@@ -160,230 +152,160 @@ exprOfToken token =
 
 push : Token -> State -> State
 push token state =
-    { state | tokens = List.drop 1 state.tokens, stack = Left token :: state.stack }
+    { state | tokens = List.drop 1 state.tokens, stack = token :: state.stack }
 
 
 
 -- REDUCE
 
 
+toSymbols : List Token -> List Symbol
+toSymbols tokens =
+    List.map toSymbol tokens |> Maybe.Extra.values
+
+
+toSymbols2 : List Token -> List Symbol
+toSymbols2 tokens =
+    List.map toSymbol2 tokens
+
+
+toSymbol : Token -> Maybe Symbol
+toSymbol token =
+    case token of
+        LB _ ->
+            Just L
+
+        RB _ ->
+            Just R
+
+        _ ->
+            Nothing
+
+
+toSymbol2 : Token -> Symbol
+toSymbol2 token =
+    case token of
+        LB _ ->
+            L
+
+        RB _ ->
+            R
+
+        _ ->
+            O
+
+
+reduceState : State -> State
 reduceState state =
-    let
-        reduction =
-            reduce state.stack
-
-        bracketCount =
-            if reduction.rule == M then
-                state.bracketCount - 1
-
-            else
-                state.bracketCount
-    in
-    if reduction.rule == M && bracketCount == 0 then
-        reduceStateM { state | stack = reduction.result, bracketCount = bracketCount }
+    if M.reducible (state.stack |> toSymbols |> List.reverse |> Debug.log "SYMBOLS") then
+        let
+            reducedStack =
+                eval (state.stack |> List.reverse |> Debug.log "STACK (before eval)") |> Debug.log "REDUCED STACK"
+        in
+        { state | stack = [], committed = reducedStack ++ state.committed }
 
     else
-        { state | stack = reduction.result, bracketCount = bracketCount }
+        recoverFromError2 state
 
 
-reduce : List (Either Token Expr) -> { rule : Rule, result : List (Either Token Expr) }
-reduce list =
-    case list of
-        (Left (S name meta2)) :: (Left (LB meta1)) :: _ ->
-            let
-                _ =
-                    Debug.log "RULE" "F"
-
-                _ =
-                    Debug.log "stack" list
-            in
-            { rule = F, result = Right (Expr name [] { begin = meta1.begin, end = meta2.end }) :: List.drop 1 list }
-
-        (Left (S content meta2)) :: (Right (Expr name exprs meta1)) :: _ ->
-            let
-                _ =
-                    Debug.log "RULE" "A1"
-
-                _ =
-                    Debug.log "stack" list
-            in
-            { rule = A1, result = Right (Expr name (Text content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
-
-        (Left (W content meta2)) :: (Right (Expr name exprs meta1)) :: _ ->
-            let
-                _ =
-                    Debug.log "RULE" "A2"
-
-                _ =
-                    Debug.log "stack" list
-            in
-            { rule = A2, result = Right (Expr name (Text content meta1 :: exprs) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
-
-        (Right (Expr name2 exprs2 meta2)) :: (Right (Expr name1 exprs1 meta1)) :: _ ->
-            let
-                _ =
-                    Debug.log "RULE" "A3"
-
-                _ =
-                    Debug.log "stack" list
-            in
-            { rule = A3, result = Right (Expr name1 (exprs1 ++ [ Expr name2 exprs2 meta2 ]) { begin = meta1.begin, end = meta2.end }) :: List.drop 2 list }
-
-        (Left (RB _)) :: rest ->
-            let
-                _ =
-                    Debug.log "RULE" "M"
-
-                _ =
-                    Debug.log "stack" ( List.length list, list )
-
-                prefix =
-                    List.Extra.takeWhile (\t -> not (isLB t)) rest |> List.map evaluated
-
-                suffix =
-                    List.drop (List.length prefix + 1) rest
-            in
-            { rule = M, result = prefix ++ suffix }
-
-        _ ->
-            { rule = NoRule, result = list }
+unbracket : List a -> List a
+unbracket list =
+    List.drop 1 (List.take (List.length list - 1) list)
 
 
-reduceStateM : State -> State
-reduceStateM state =
+eval : List Token -> List Expr
+eval tokens =
     let
         _ =
-            Debug.log "PENULTIMATE" state.stack
-
-        finalExpr : Expr
-        finalExpr =
-            (reduce state.stack).result |> List.map unevaluated |> apply
-
-        -- apply
-        committed =
-            finalExpr :: state.committed
-
-        stack =
-            if state.bracketCount == 0 then
-                []
-
-            else
-                state.stack
+            Debug.log "EVAL, TOKENS" tokens
     in
-    { state | stack = stack, committed = committed }
+    if
+        List.map Token.type_ (List.take 1 tokens)
+            == [ TLB ]
+            && List.map Token.type_ (List.take 1 (List.reverse tokens))
+            == [ TRB ]
+    then
+        let
+            args =
+                unbracket tokens |> Debug.log "ARGS"
+        in
+        case List.head args of
+            Just (S name meta) ->
+                [ Expr name (evalList (List.drop 1 args)) meta ]
+
+            Nothing ->
+                [ Text "error: expected S name ..." dummyLoc ]
+
+            _ ->
+                [ Text "error: expected something different ..." dummyLoc ]
+
+    else
+        []
 
 
-eval : List (Either Token Expr) -> List (Either Token Expr)
-eval items =
-    items
-
-
-
--- APPLY (HELPER FOR reduceM)
-
-
-apply : List (Either Token Expr) -> Expr
-apply list_ =
-    list_ |> Debug.log "apply (IN)" |> apply_ |> Debug.log "apply (OUT)"
-
-
-apply_ : List (Either Token Expr) -> Expr
-apply_ list_ =
-    let
-        list =
-            List.reverse list_
-    in
-    case List.head list of
-        Nothing ->
-            Text "Error: empty list in function apply" dummyLoc
-
-        Just f ->
-            case f of
-                Right (Expr name args_ meta) ->
+evalList : List Token -> List Expr
+evalList tokens =
+    case List.head tokens of
+        Just token ->
+            case Token.type_ token of
+                TLB ->
                     let
-                        args =
-                            List.foldl (\item acc -> makeArg item :: acc) args_ (List.drop 1 list)
-                                |> List.reverse
+                        _ =
+                            Debug.log "SYMBOLS" (toSymbols2 tokens)
                     in
-                    Expr name args meta
+                    case M.match (toSymbols2 tokens) of
+                        Nothing ->
+                            [ Text "error on match" dummyLoc ]
+
+                        Just k ->
+                            let
+                                _ =
+                                    Debug.log "MATCH AT" k
+
+                                ( a, b ) =
+                                    M.splitAt (k + 1) (tokens |> Debug.log "TOKENS (EVALLIST)")
+
+                                _ =
+                                    Debug.log "AAA" a
+
+                                _ =
+                                    Debug.log "BBB" b
+
+                                prefix =
+                                    eval a |> Debug.log "AAA, evaluated"
+
+                                suffix =
+                                    evalList b |> Debug.log "BBB, evaluated"
+                            in
+                            prefix ++ suffix
 
                 _ ->
-                    Text "Error: expected FExpr in first position" dummyLoc
+                    case exprOfToken token of
+                        Just expr ->
+                            expr :: evalList (List.drop 1 tokens)
 
-
-makeArg : Either Token Expr -> Expr
-makeArg item =
-    case item of
-        Right expr ->
-            expr
-                |> Debug.log "makeArg (EXPR, INT)"
-                |> reverseArgs
-                |> Debug.log "makeArg (EXPR, OUT)"
-
-        Left token ->
-            case token of
-                S str meta ->
-                    Text str meta
-
-                W str meta ->
-                    Text str meta
-
-                _ ->
-                    Text "Error in converting token to expr" dummyLoc
-
-
-reverseArgs : Expr -> Expr
-reverseArgs expr =
-    case expr of
-        Expr name args loc ->
-            Expr name (List.reverse args) loc
+                        Nothing ->
+                            [ Text "error converting Token" dummyLoc ]
 
         _ ->
-            expr
+            []
 
 
-
--- EVALUATED AND UNEVALUATED (HELPERS FOR reduce and reduceM)
-
-
-evaluated : Either Token Expr -> Either Token Expr
-evaluated item =
-    case item of
-        Left _ ->
-            item
-
-        Right (EV _) ->
-            item
-
-        Right expr ->
-            Right (EV expr)
+recoverFromError1 unreducedStack state =
+    state
 
 
-unevaluated : Either Token Expr -> Either Token Expr
-unevaluated item =
-    case item of
-        Left _ ->
-            item
+recoverFromError2 state =
+    state
 
-        Right (EV expr) ->
-            Right expr
 
-        Right expr ->
-            Right expr
+reduce : List Token -> Either (List Token) Expr
+reduce stack =
+    Right (Text "done (ha ha)" { begin = 0, end = 0 })
 
 
 
 -- HELPERS
-
-
-isLB : Either Token Expr -> Bool
-isLB stackItem =
-    case stackItem of
-        Right _ ->
-            False
-
-        Left token ->
-            Token.type_ token == TLB
 
 
 dummyLoc =

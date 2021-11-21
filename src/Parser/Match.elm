@@ -4,6 +4,7 @@ module Parser.Match exposing (..)
 type Symbol
     = L
     | R
+    | O
 
 
 symbolIndex : Symbol -> Int
@@ -15,6 +16,9 @@ symbolIndex symbol =
         R ->
             -1
 
+        O ->
+            0
+
 
 reducible : List Symbol -> Bool
 reducible symbols =
@@ -23,6 +27,9 @@ reducible symbols =
             True
 
         Just R ->
+            False
+
+        Just O ->
             False
 
         Just L ->
@@ -34,16 +41,27 @@ reducible symbols =
                     reducible (List.drop 1 (deleteAt k symbols))
 
 
+{-|
 
-{-
-   > deleteAt 1 [0, 1, 2]
+> deleteAt 1 [0, 1, 2]
+
      [0,2] : List number
+
 -}
-
-
 deleteAt : Int -> List a -> List a
 deleteAt k list =
     List.take k list ++ List.drop (k + 1) list
+
+
+{-|
+
+    > splitAt 2 [0, 1, 2, 3, 4]
+      ([0,1],[3,4])
+
+-}
+splitAt : Int -> List a -> ( List a, List a )
+splitAt k list =
+    ( List.take k list, List.drop (k + 1) list )
 
 
 type alias State =

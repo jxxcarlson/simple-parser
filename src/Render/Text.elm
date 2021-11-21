@@ -1,6 +1,14 @@
-module Render.Text exposing (fromExpr, print)
+module Render.Text exposing (fromExpr, idem, print)
 
 import Parser.Expression as Expression exposing (Expr(..))
+
+
+idem : String -> String
+idem str =
+    str
+        |> Expression.parse
+        |> .committed
+        |> print
 
 
 print : List Expr -> String
