@@ -18,6 +18,7 @@ type ExprS
 type alias StateS =
     { step : Int
     , tokens : List SimpleToken
+    , tokenIndex : Int
     , committed : List ExprS
     , stack : List SimpleToken
     }
@@ -47,6 +48,7 @@ toStateS state =
     { step = state.step
     , tokens = List.map simplifyToken state.tokens
     , committed = List.map simplify state.committed
+    , tokenIndex = state.tokenIndex
     , stack = List.reverse <| simplifyStack state.stack
     }
 

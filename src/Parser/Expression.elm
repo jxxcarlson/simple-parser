@@ -26,6 +26,8 @@ type Expr
 type alias State =
     { step : Int
     , tokens : List Token
+    , numberOfTokens : Int
+    , tokenIndex : Int
     , committed : List Expr
     , stack : List Token
     }
@@ -37,8 +39,14 @@ type alias State =
 
 init : String -> State
 init str =
+    let
+        tokens =
+            Token.run str |> List.reverse
+    in
     { step = 0
-    , tokens = Token.run str |> List.reverse
+    , tokens = tokens
+    , numberOfTokens = List.length tokens
+    , tokenIndex = 0
     , committed = []
     , stack = []
     }
@@ -63,10 +71,14 @@ nextStep : State -> Step State State
 nextStep state =
     case List.head state.tokens of
         Nothing ->
-            Done state
+            if List.isEmpty state.stack then
+                Done state
+
+            else
+                recoverFromError state
 
         Just token ->
-            pushToken token state
+            pushToken token { state | tokenIndex = state.tokenIndex + 1 }
                 |> reduceState
                 |> (\st -> { st | step = st.step + 1 })
                 |> Loop
@@ -193,7 +205,7 @@ reduceState state =
         { state | stack = [], committed = reducedStack ++ state.committed }
 
     else
-        recoverFromError2 state
+        state
 
 
 unbracket : List a -> List a
@@ -256,12 +268,8 @@ evalList tokens =
             []
 
 
-recoverFromError1 unreducedStack state =
-    state
-
-
-recoverFromError2 state =
-    state
+recoverFromError state =
+    Done state
 
 
 reduce : List Token -> Either (List Token) Expr
