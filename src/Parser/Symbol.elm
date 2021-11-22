@@ -1,4 +1,4 @@
-module Parser.Symbol exposing (Symbol(..), convertTokens, convertTokens2, toString)
+module Parser.Symbol exposing (Symbol(..), balance, convertTokens, convertTokens2, toString, value)
 
 import Maybe.Extra
 import Parser.Token exposing (Token(..))
@@ -8,6 +8,24 @@ type Symbol
     = L
     | R
     | O
+
+
+value : Symbol -> Int
+value symbol =
+    case symbol of
+        L ->
+            1
+
+        R ->
+            -1
+
+        O ->
+            0
+
+
+balance : List Symbol -> Int
+balance symbols =
+    symbols |> List.map value |> List.sum
 
 
 symbolToString : Symbol -> String

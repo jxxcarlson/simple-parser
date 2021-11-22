@@ -103,7 +103,7 @@ stringValue token =
 
 toString : List Token -> String
 toString tokens =
-    List.map stringValue tokens |> String.join " "
+    List.map stringValue tokens |> String.join ""
 
 
 length : Token -> Int

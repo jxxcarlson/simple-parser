@@ -1,19 +1,6 @@
-module Parser.Match exposing (..)
+module Parser.Match exposing (deleteAt, match, reducible, splitAt)
 
-import Parser.Symbol as Symbol exposing (Symbol(..))
-
-
-symbolIndex : Symbol -> Int
-symbolIndex symbol =
-    case symbol of
-        L ->
-            1
-
-        R ->
-            -1
-
-        O ->
-            0
+import Parser.Symbol as Symbol exposing (Symbol(..), value)
 
 
 reducible : List Symbol -> Bool
@@ -71,11 +58,11 @@ match symbols =
             Nothing
 
         Just symbol ->
-            if symbolIndex symbol < 0 then
+            if value symbol < 0 then
                 Nothing
 
             else
-                loop { symbols = List.drop 1 symbols, index = 1, brackets = symbolIndex symbol } nextStep
+                loop { symbols = List.drop 1 symbols, index = 1, brackets = value symbol } nextStep
 
 
 nextStep : State -> Step State (Maybe Int)
@@ -87,7 +74,7 @@ nextStep state =
         Just sym ->
             let
                 brackets =
-                    state.brackets + symbolIndex sym
+                    state.brackets + value sym
             in
             if brackets < 0 then
                 Done Nothing

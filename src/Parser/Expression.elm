@@ -6,7 +6,7 @@ module Parser.Expression exposing
     )
 
 import Either exposing (Either(..))
-import Maybe.Extra
+import List.Extra
 import Parser.Match as M
 import Parser.Symbol as Symbol exposing (Symbol(..))
 import Parser.Token as Token exposing (Loc, Token(..), TokenType(..))
@@ -70,7 +70,7 @@ run state =
 
 nextStep : State -> Step State State
 nextStep state =
-    case List.head state.tokens of
+    case List.Extra.getAt state.tokenIndex state.tokens of
         Nothing ->
             if List.isEmpty state.stack then
                 Done state
@@ -113,7 +113,7 @@ pushToken token state =
 
 pushLeft : Token -> State -> State
 pushLeft token state =
-    { state | stack = token :: state.stack, tokens = List.drop 1 state.tokens }
+    { state | stack = token :: state.stack }
 
 
 pushOrCommit : Token -> State -> State
@@ -132,7 +132,7 @@ commit token state =
             state
 
         Just expr ->
-            { state | tokens = List.drop 1 state.tokens, committed = expr :: state.committed }
+            { state | committed = expr :: state.committed }
 
 
 exprOfToken : Token -> Maybe Expr
@@ -153,7 +153,7 @@ exprOfToken token =
 
 push : Token -> State -> State
 push token state =
-    { state | tokens = List.drop 1 state.tokens, stack = token :: state.stack }
+    { state | stack = token :: state.stack }
 
 
 
@@ -246,20 +246,29 @@ addErrorMessage message state =
 recoverFromError : State -> Step State State
 recoverFromError state =
     let
+        k =
+            Symbol.balance <| Symbol.convertTokens (List.reverse state.stack)
+
         newStack =
-            [ RB dummyLoc ] ++ state.stack
+            List.repeat k (RB dummyLoc) ++ state.stack
 
         newSymbols =
-            Symbol.convertTokens (List.reverse newStack) |> Debug.log "SYMBOLS"
+            Symbol.convertTokens (List.reverse newStack)
 
         reducible =
             M.reducible newSymbols
     in
     if reducible then
-        nextStep <| addErrorMessage " ] " <| reduceState <| { state | stack = newStack, tokenIndex = 0, numberOfTokens = List.length newStack }
+        Done <| addErrorMessage " ] " <| reduceState <| { state | stack = newStack, tokenIndex = 0, numberOfTokens = List.length newStack }
 
     else
-        Done { state | committed = Text ("Error, braces messed up in " ++ Token.toString state.tokens) dummyLoc :: state.committed }
+        Done
+            { state
+                | committed =
+                    Expr "red" [ Text (" << braces (" ++ String.fromInt k ++ ")") dummyLoc ] dummyLoc
+                        :: Expr "blue" [ Text (" " ++ Token.toString state.tokens) dummyLoc ] dummyLoc
+                        :: state.committed
+            }
 
 
 
