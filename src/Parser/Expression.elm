@@ -250,16 +250,16 @@ recoverFromError state =
             [ RB dummyLoc ] ++ state.stack
 
         newSymbols =
-            Symbol.convertTokens (List.reverse newStack)
+            Symbol.convertTokens (List.reverse newStack) |> Debug.log "SYMBOLS"
 
         reducible =
             M.reducible newSymbols
     in
     if reducible then
-        Done <| addErrorMessage " ] " <| reduceState <| { state | stack = newStack, tokenIndex = 0, numberOfTokens = List.length newStack }
+        nextStep <| addErrorMessage " ] " <| reduceState <| { state | stack = newStack, tokenIndex = 0, numberOfTokens = List.length newStack }
 
     else
-        Done { state | committed = Text "I could not fix the syntax error — missing right brace?" dummyLoc :: state.committed }
+        Done { state | committed = Text ("Error, braces messed up in " ++ Token.toString state.tokens) dummyLoc :: state.committed }
 
 
 

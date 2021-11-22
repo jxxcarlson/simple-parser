@@ -7,7 +7,7 @@ module Parser.Token exposing
     , mathParser
     , nextStep
     , run
-    , stringValue
+    , toString
     , type_
     )
 
@@ -86,11 +86,24 @@ stringValue token =
         W str _ ->
             str
 
-        VerbatimToken _ str _ ->
-            str
+        VerbatimToken name str _ ->
+            case name of
+                "math" ->
+                    "$" ++ str ++ "$"
+
+                "code" ->
+                    "`" ++ str ++ "`"
+
+                _ ->
+                    "unrecognized verbatim token"
 
         TokenError _ _ ->
             "tokenError"
+
+
+toString : List Token -> String
+toString tokens =
+    List.map stringValue tokens |> String.join " "
 
 
 length : Token -> Int
