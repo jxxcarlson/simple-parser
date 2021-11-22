@@ -78,7 +78,7 @@ type alias Flags =
 
 
 initialText =
-    "This is a [red [italic real]] [blue test]"
+    "This is a ["
 
 
 init : Flags -> ( Model, Cmd Msg )
