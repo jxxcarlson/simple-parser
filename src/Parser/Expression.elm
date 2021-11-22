@@ -82,6 +82,7 @@ nextStep state =
                 Done state
 
             else
+                -- the stack is not empty, so we need to handle the parse error
                 recoverFromError state
 
         Just token ->
@@ -204,10 +205,10 @@ eval tokens =
                 [ Expr name (evalList (List.drop 1 args)) meta ]
 
             Nothing ->
-                [ errorMessage "[ ..." ]
+                [ errorMessage "..." ]
 
             _ ->
-                [ Text "error: expected something different ..." dummyLoc ]
+                [ errorMessage2 "error: expecting '[f ... ]' — missing brackets or function name" ]
 
     else
         []
@@ -247,6 +248,11 @@ errorMessage message =
     Expr "red" [ Text message dummyLoc ] dummyLoc
 
 
+errorMessage2 : String -> Expr
+errorMessage2 message =
+    Expr "blue" [ Text message dummyLoc ] dummyLoc
+
+
 colorRed : Expr -> Expr
 colorRed expr =
     Expr "red" [ expr ] dummyLoc
@@ -276,14 +282,96 @@ addErrorMessage message state =
     { state | committed = committed }
 
 
+isReducible : List Token -> Bool
+isReducible tokens =
+    tokens |> List.reverse |> Symbol.convertTokens |> M.reducible
+
+
 recoverFromError : State -> Step State State
 recoverFromError state =
     let
+        _ =
+            Debug.log "recoverFromError, STACK" ( List.length state.stack, List.reverse state.stack )
+    in
+    case List.reverse state.stack of
+        [] ->
+            Done state
+
+        (W _ _) :: rest ->
+            -- Done state
+            if isReducible rest then
+                recoverFromError
+                    { state
+                        | stack = rest
+                    }
+
+            else
+                Done state
+
+        (S text _) :: rest ->
+            -- Done { state | committed = errorMessage text :: state.committed }
+            if isReducible rest then
+                recoverFromError
+                    { state
+                        | committed = errorMessage (" " ++ text ++ errorSuffix rest) :: state.committed
+                        , stack = rest
+                    }
+
+            else
+                Done state
+
+        -- There is an incomplete function (no terminating right bracket)
+        (LB _) :: (S fName _) :: rest ->
+            if isReducible rest then
+                recoverFromError
+                    { state
+                        | committed = errorMessage ("[" ++ fName ++ errorSuffix rest) :: state.committed
+                        , stack = rest
+                    }
+
+            else
+                recoverFromError1
+                    { state
+                        | committed = errorMessage ("[" ++ fName ++ errorSuffix rest) :: state.committed
+                        , stack = rest
+                    }
+
+        (LB _) :: [] ->
+            Done
+                { state
+                    | committed = errorMessage "[...?" :: state.committed
+                    , stack = []
+                    , tokenIndex = 0
+                    , numberOfTokens = 0
+                }
+
+        _ ->
+            recoverFromError1 state
+
+
+errorSuffix rest =
+    case rest of
+        [] ->
+            "]?"
+
+        (W _ _) :: [] ->
+            "]?"
+
+        _ ->
+            ""
+
+
+recoverFromError1 : State -> Step State State
+recoverFromError1 state =
+    let
+        _ =
+            Debug.log "RECOVER FROM ERROR" ( 1, state.stack )
+
         k =
             Symbol.balance <| Symbol.convertTokens (List.reverse state.stack)
 
         newStack =
-            List.repeat k (RB dummyLoc) ++ state.stack
+            List.repeat k (RB dummyLoc) ++ state.stack |> Debug.log "newStack"
 
         newSymbols =
             Symbol.convertTokens (List.reverse newStack)
@@ -292,16 +380,47 @@ recoverFromError state =
             M.reducible newSymbols
     in
     if reducible then
-        Done <| addErrorMessage " ]? " <| reduceState <| { state | stack = newStack, tokenIndex = 0, numberOfTokens = List.length newStack }
+        Done <|
+            addErrorMessage " ]? " <|
+                reduceState <|
+                    { state
+                        | stack = newStack
+                        , tokenIndex = 0
+                        , numberOfTokens = List.length newStack
+                        , committed = errorMessage "[" :: state.committed
+                    }
 
     else
         Done
             { state
                 | committed =
-                    Expr "red" [ Text (" << braces (" ++ String.fromInt k ++ ")") dummyLoc ] dummyLoc
-                        :: Expr "blue" [ Text (" " ++ Token.toString state.tokens) dummyLoc ] dummyLoc
+                    braceError k
+                        -- :: Expr "blue" [ Text (" " ++ Token.toString state.tokens) dummyLoc ] dummyLoc
                         :: state.committed
             }
+
+
+braceError : Int -> Expr
+braceError k =
+    if k < 0 then
+        let
+            _ =
+                Debug.log "k" -k
+
+            braces =
+                List.repeat -k "]" |> String.join "" |> Debug.log "BRACES"
+        in
+        errorMessage2 <| " " ++ braces ++ " << Too many right braces (" ++ String.fromInt -k ++ ")"
+
+    else
+        let
+            _ =
+                Debug.log "k" -k
+
+            braces =
+                List.repeat k "[" |> String.join "" |> Debug.log "BRACES"
+        in
+        errorMessage2 <| " " ++ braces ++ " << Too many left braces (" ++ String.fromInt k ++ ")"
 
 
 
