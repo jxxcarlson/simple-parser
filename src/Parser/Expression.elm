@@ -184,14 +184,17 @@ unbracket list =
     List.drop 1 (List.take (List.length list - 1) list)
 
 
+areBracketed : List Token -> Bool
+areBracketed tokens =
+    List.map Token.type_ (List.take 1 tokens)
+        == [ TLB ]
+        && List.map Token.type_ (List.take 1 (List.reverse tokens))
+        == [ TRB ]
+
+
 eval : List Token -> List Expr
 eval tokens =
-    if
-        List.map Token.type_ (List.take 1 tokens)
-            == [ TLB ]
-            && List.map Token.type_ (List.take 1 (List.reverse tokens))
-            == [ TRB ]
-    then
+    if areBracketed tokens then
         let
             args =
                 unbracket tokens
@@ -201,7 +204,7 @@ eval tokens =
                 [ Expr name (evalList (List.drop 1 args)) meta ]
 
             Nothing ->
-                [ Text "error: expected S name ..." dummyLoc ]
+                [ errorMessage "[ ..." ]
 
             _ ->
                 [ Text "error: expected something different ..." dummyLoc ]
@@ -244,9 +247,33 @@ errorMessage message =
     Expr "red" [ Text message dummyLoc ] dummyLoc
 
 
+colorRed : Expr -> Expr
+colorRed expr =
+    Expr "red" [ expr ] dummyLoc
+
+
+colorFirstElementRed : State -> State
+colorFirstElementRed state =
+    let
+        ( a, b ) =
+            M.splitAt 1 state.committed
+
+        newCommitted =
+            List.map colorRed a ++ b
+    in
+    { state | committed = newCommitted }
+
+
 addErrorMessage : String -> State -> State
 addErrorMessage message state =
-    { state | committed = errorMessage message :: state.committed }
+    let
+        _ =
+            Debug.log "STATE, COMMITTED (1)" state.committed
+
+        committed =
+            errorMessage (Debug.log "MESSAGE" message) :: state.committed |> Debug.log "STATE, COMMITTED (2)"
+    in
+    { state | committed = committed }
 
 
 recoverFromError : State -> Step State State
@@ -265,7 +292,7 @@ recoverFromError state =
             M.reducible newSymbols
     in
     if reducible then
-        Done <| addErrorMessage " ] " <| reduceState <| { state | stack = newStack, tokenIndex = 0, numberOfTokens = List.length newStack }
+        Done <| addErrorMessage " ]? " <| reduceState <| { state | stack = newStack, tokenIndex = 0, numberOfTokens = List.length newStack }
 
     else
         Done
