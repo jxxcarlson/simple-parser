@@ -1,4 +1,4 @@
-module Parser.Simple exposing (ExprS(..), parse, simplifyToken, tokenize)
+module Parser.Simple exposing (ExprS(..), parse, simplify, simplifyToken, tokenize)
 
 import Either exposing (Either)
 import Parser.Advanced exposing (DeadEnd)
