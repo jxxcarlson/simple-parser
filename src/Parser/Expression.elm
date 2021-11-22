@@ -2,6 +2,7 @@ module Parser.Expression exposing
     ( Expr(..)
     , State
     , parse
+    , parse_
     , run
     )
 
@@ -55,6 +56,11 @@ init str =
 
 
 -- PARSER
+
+
+parse_ : String -> List Expr
+parse_ str =
+    parse str |> .committed
 
 
 parse : String -> State
