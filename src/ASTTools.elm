@@ -47,6 +47,3 @@ stringValue text =
 
         Error str ->
             str
-
-        EV expr ->
-            ""

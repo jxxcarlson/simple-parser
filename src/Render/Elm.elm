@@ -29,9 +29,6 @@ render generation settings expr =
         Error str ->
             Element.el [ Font.color redColor ] (Element.text str)
 
-        EV _ ->
-            Element.none
-
 
 htmlId str =
     Element.htmlAttribute (Html.Attributes.id str)
