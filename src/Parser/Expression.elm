@@ -294,33 +294,14 @@ recoverFromError state =
             Debug.log "recoverFromError, STACK" ( List.length state.stack, List.reverse state.stack )
     in
     case List.reverse state.stack of
-        [] ->
-            Done state
+        (LB _) :: (LB meta) :: rest ->
+            Loop
+                { state
+                    | committed = errorMessage ("[" ++ errorSuffix rest) :: state.committed
+                    , stack = []
+                    , tokenIndex = meta.index
+                }
 
-        (W _ _) :: rest ->
-            -- Done state
-            if isReducible rest then
-                recoverFromError
-                    { state
-                        | stack = rest
-                    }
-
-            else
-                Done state
-
-        (S text _) :: rest ->
-            -- Done { state | committed = errorMessage text :: state.committed }
-            if isReducible rest then
-                recoverFromError
-                    { state
-                        | committed = errorMessage (" " ++ text ++ errorSuffix rest) :: state.committed
-                        , stack = rest
-                    }
-
-            else
-                Done state
-
-        -- There is an incomplete function (no terminating right bracket)
         (LB _) :: (S fName meta) :: rest ->
             Loop
                 { state
