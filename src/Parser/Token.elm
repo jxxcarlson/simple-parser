@@ -29,12 +29,13 @@ type Token
 
 
 type alias Loc =
-    { begin : Int, end : Int }
+    { begin : Int, end : Int, index : Int }
 
 
 type alias State a =
     { source : String
     , scanpointer : Int
+    , tokenIndex : Int
     , sourceLength : Int
     , tokens : List a
     }
@@ -130,7 +131,7 @@ length token =
 
 init : String -> State a
 init str =
-    { source = str, scanpointer = 0, sourceLength = String.length str, tokens = [] }
+    { source = str, scanpointer = 0, sourceLength = String.length str, tokens = [], tokenIndex = 0 }
 
 
 type alias TokenParser =
@@ -152,12 +153,12 @@ run source =
 -}
 get : State Token -> Int -> String -> Token
 get state start input =
-    case Parser.run (tokenParser state start) input of
+    case Parser.run (tokenParser state start state.tokenIndex) input of
         Ok token ->
             token
 
         Err errorList ->
-            TokenError errorList { begin = start, end = start + 1 }
+            TokenError errorList { begin = start, end = start + 1, index = state.tokenIndex }
 
 
 nextStep : State Token -> Step (State Token) (List Token)
@@ -173,73 +174,67 @@ nextStep state =
             newScanPointer =
                 state.scanpointer + length token + 1
         in
-        Loop { state | tokens = token :: state.tokens, scanpointer = newScanPointer }
+        Loop { state | tokens = token :: state.tokens, scanpointer = newScanPointer, tokenIndex = state.tokenIndex + 1 }
 
 
 {-| Expression.Tokenizer.tokenParser calls L1.tokenParser
 with arguments tokenStack and start. The first argument
 is not used (although it is for the Markdown parser)
 -}
-tokenParser : a -> Int -> TokenParser
-tokenParser _ start =
-    tokenParser_ start
+tokenParser : a -> Int -> Int -> TokenParser
+tokenParser _ start index =
+    tokenParser_ start index
 
 
 languageChars =
     [ '[', ']', '`', '$' ]
 
 
-tokenParser_ : Int -> TokenParser
-tokenParser_ start =
+tokenParser_ : Int -> Int -> TokenParser
+tokenParser_ start index =
     Parser.oneOf
-        [ textParser start
-        , mathParser start
-        , codeParser start
-        , leftBracketParser start
-        , rightBracketParser start
-        , whiteSpaceParser start
+        [ textParser start index
+        , mathParser start index
+        , codeParser start index
+        , leftBracketParser start index
+        , rightBracketParser start index
+        , whiteSpaceParser start index
         ]
 
 
-whiteSpaceParser : Int -> TokenParser
-whiteSpaceParser start =
+whiteSpaceParser : Int -> Int -> TokenParser
+whiteSpaceParser start index =
     PT.text (\c -> c == ' ') (\c -> c == ' ')
-        |> Parser.map (\data -> W data.content { begin = start, end = start })
+        |> Parser.map (\data -> W data.content { begin = start, end = start, index = index })
 
 
-leftBracketParser : Int -> TokenParser
-leftBracketParser start =
+leftBracketParser : Int -> Int -> TokenParser
+leftBracketParser start index =
     PT.text (\c -> c == '[') (\_ -> False)
-        |> Parser.map (\_ -> LB { begin = start, end = start })
+        |> Parser.map (\_ -> LB { begin = start, end = start, index = index })
 
 
-rightBracketParser : Int -> TokenParser
-rightBracketParser start =
+rightBracketParser : Int -> Int -> TokenParser
+rightBracketParser start index =
     PT.text (\c -> c == ']') (\_ -> False)
-        |> Parser.map (\_ -> RB { begin = start, end = start })
+        |> Parser.map (\_ -> RB { begin = start, end = start, index = index })
 
 
-textParser start =
+textParser start index =
     PT.text (\c -> not <| List.member c (' ' :: languageChars)) (\c -> not <| List.member c (' ' :: languageChars))
-        |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1, index = index })
 
 
-mathParser : Int -> TokenParser
-mathParser start =
+mathParser : Int -> Int -> TokenParser
+mathParser start index =
     PT.textWithEndSymbol "$" (\c -> c == '$') (\c -> c /= '$')
-        |> Parser.map (\data -> VerbatimToken "math" (String.dropRight 1 (String.dropLeft 1 data.content)) { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> VerbatimToken "math" (String.dropRight 1 (String.dropLeft 1 data.content)) { begin = start, end = start + data.end - data.begin - 1, index = index })
 
 
-codeParser : Int -> TokenParser
-codeParser start =
+codeParser : Int -> Int -> TokenParser
+codeParser start index =
     PT.textWithEndSymbol "`" (\c -> c == '`') (\c -> c /= '`')
-        |> Parser.map (\data -> VerbatimToken "code" (String.dropRight 1 (String.dropLeft 1 data.content)) { begin = start, end = start + data.end - data.begin - 1 })
-
-
-functionPartsParser : Int -> TokenParser
-functionPartsParser start =
-    PT.textWithEndSymbol " " Char.isAlphaNum (\c -> c /= ' ')
-        |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1 })
+        |> Parser.map (\data -> VerbatimToken "code" (String.dropRight 1 (String.dropLeft 1 data.content)) { begin = start, end = start + data.end - data.begin - 1, index = index })
 
 
 
