@@ -147,12 +147,9 @@ type Expr
     = Expr String (List Expr) Meta
     | Text String Meta
     | Verbatim String String Meta
-    | EV Expr
     | Error String
 ```
 
-The `EV` constructor stands for "evaluated." It plays a role in reducing the stack but
-is not present in the output of the parser.
 Parsing is carried out by a functional loop with 
 
 
@@ -160,9 +157,10 @@ Parsing is carried out by a functional loop with
 type alias State =
     { step : Int
     , tokens : List Token
+    , numberOfTokens : Int
+    , tokenIndex : Int
     , committed : List Expr
-    , stack : List (Either Token Expr)
-    , bracketCount : Int
+    , stack : List Token
     }
 ```
 
