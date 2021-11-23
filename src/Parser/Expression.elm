@@ -345,10 +345,11 @@ recoverFromError state =
                     _ =
                         Debug.log "2. RE-ENTERING LOOP, TOKEN INDEX" state.tokenIndex
                 in
-                recoverFromError
+                Loop
                     { state
                         | committed = errorMessage ("[" ++ fName ++ errorSuffix rest) :: state.committed
-                        , stack = rest
+                        , stack = []
+                        , tokenIndex = meta.index + 1
                     }
 
         (LB _) :: [] ->
