@@ -322,35 +322,12 @@ recoverFromError state =
 
         -- There is an incomplete function (no terminating right bracket)
         (LB _) :: (S fName meta) :: rest ->
-            if isReducible rest then
-                let
-                    _ =
-                        Debug.log "1. RE-ENTERING LOOP, STACK (R)" rest
-
-                    _ =
-                        Debug.log "1. RE-ENTERING LOOP, TOKEN INDEX" state.tokenIndex
-                in
-                Loop
-                    { state
-                        | committed = errorMessage ("[" ++ fName ++ errorSuffix rest) :: state.committed
-                        , stack = []
-                        , tokenIndex = meta.index + 1
-                    }
-
-            else
-                let
-                    _ =
-                        Debug.log "2. RE-ENTERING LOOP, STACK (R)" rest
-
-                    _ =
-                        Debug.log "2. RE-ENTERING LOOP, TOKEN INDEX" state.tokenIndex
-                in
-                Loop
-                    { state
-                        | committed = errorMessage ("[" ++ fName ++ errorSuffix rest) :: state.committed
-                        , stack = []
-                        , tokenIndex = meta.index + 1
-                    }
+            Loop
+                { state
+                    | committed = errorMessage ("[" ++ fName ++ errorSuffix rest) :: state.committed
+                    , stack = []
+                    , tokenIndex = meta.index + 1
+                }
 
         (LB _) :: [] ->
             Done
