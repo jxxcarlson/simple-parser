@@ -169,11 +169,7 @@ push token state =
 reduceState : State -> State
 reduceState state =
     if M.reducible (state.stack |> Symbol.convertTokens |> List.reverse) then
-        let
-            reducedStack =
-                eval (state.stack |> List.reverse)
-        in
-        { state | stack = [], committed = reducedStack ++ state.committed }
+        { state | stack = [], committed = eval (state.stack |> List.reverse) ++ state.committed }
 
     else
         state

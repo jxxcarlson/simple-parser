@@ -92,9 +92,6 @@ simplify expr =
         Verbatim name str _ ->
             VerbatimS name str
 
-        EV expr_ ->
-            EVS (simplify expr_)
-
         Error str ->
             ErrorS str
 

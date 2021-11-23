@@ -61,6 +61,6 @@ suite =
             , idemTest "B8" "[f [g [h [i b]]] c]"
             , idemTest "B9" "$x$ a [f b]"
             , idemTest "B10" "`x` a [f b]"
-            , errorTest "B11" "[f x" "[f x][red ] ]"
+            , errorTest "B11" "[f x" "[red[f] x"
             ]
         ]

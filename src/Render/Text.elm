@@ -36,8 +36,5 @@ fromExpr expr =
                 _ ->
                     "error: verbatim " ++ name ++ " not recognized"
 
-        EV expr_ ->
-            "EV (" ++ fromExpr expr_ ++ ")"
-
         Error str ->
             "Error (" ++ str ++ ")"

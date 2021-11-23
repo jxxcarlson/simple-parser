@@ -22,8 +22,7 @@ operates on a value of type `State`, one field of which is a stack of tokens:
 
 ```
 type alias State =
-    { step : Int
-    , tokens : List Token
+    { tokens : List Token
     , numberOfTokens : Int
     , tokenIndex : Int
     , committed : List Expr
@@ -47,13 +46,7 @@ The `nextStep` function operates as follows
   whether the stack is empty.  Then increment 
   `state.tokenIndex`, call `reduceStack` and then re-enter the loop.
 
-Below we describe
-
-- tokenizer
-- parser
-- error recovery
-
-Very briefly, error recovery works by pattern matching on the reversed stack. The push or commit strategy guarantees that the stack begins with a left bracket token. Then we proceed as follows:
+Below we describe the tokenizer, the parser, and error recovery. Very briefly, error recovery works by pattern matching on the reversed stack. The push or commit strategy guarantees that the stack begins with a left bracket token. Then we proceed as follows:
 
 - If the reversed stack begins with two left brackets, push an error message onto 
   `stack.committed`, set `state.tokenIndex` to the token index of the second
@@ -138,106 +131,45 @@ The `Token.run` function has a companion which gives less verbose output:
   [VerbatimTokenS "code" ("`a[0] = 1`")]
 ```
 
+
+
 ## Parser
 
-The parser converts a list of tokens into a list of expressions, where
+We briefly sketched the operation of the parser in the introduction.  Here we give some more detail.  The functional loop is controlled by the `nextStep` function listed 
+below.  If retrieving a new token at index `state.tokenIndex` fails, there are two 
+alternatives. If the stack is empty, then all tokens have successfully parsed, and the 
+parse tree stored in `state.committed` represents the full input text.  If the stack 
+is non-empty, then that is not true, and so an error recovery strategy is invoked.  
+
+If  a new token is acquired, it is either converted to an expression and pushed onto `state.committed`, or pushed onto the stack.  Some tokens, such as those for math or code, are always converted and committed.  Other tokens, such as those representing a word of source text, are pushed to the stack if the stack is non-empty and are converted and pushed to `state.converted` otherwise.  Finally, tokens such as those representing left and right braces are always pushed onto the stack.
+
+Once a token is either pushed or committed, the stack is reduced. We describe this 
+process below.
 
 ```
-type Expr
-    = Expr String (List Expr) Meta
-    | Text String Meta
-    | Verbatim String String Meta
-    | Error String
-```
-
-Parsing is carried out by a functional loop with 
-
-
-```
-type alias State =
-    { step : Int
-    , tokens : List Token
-    , numberOfTokens : Int
-    , tokenIndex : Int
-    , committed : List Expr
-    , stack : List Token
-    }
-```
-
-The `step` variable is a counter for the number of times the loop has been run; it
-plays no essential role but is convenient for debugging. Note that the stack is
-a list of elements that can be either tokens or expressions.  We will see how
-this is used below. The top level code for the parser is
-
-```
-parse : String -> State
-parse str =
-    run (init str)
-
 run : State -> State
 run state =
     loop state nextStep
         |> (\state_ -> { state_ | committed = List.reverse state_.committed })
-```
+        
+nextStep : State -> Step State State
+nextStep state =
+    case List.Extra.getAt state.tokenIndex state.tokens of
+        Nothing ->
+            if List.isEmpty state.stack then
+                Done state
+                
+            else
+                recoverFromError state
 
-where `nextStep` operates as follows: 
-
-- If the list of tokens is empty, the `reduce` function is applied to the 
-    current state.  Suppose that the stack of the updated state is non-empty.
-    Its head is either a `Right expr` or a `Left token`.  In the first case,
-    the expression is pushed onto the current list of committed items, and 
-    the item just processed is dropped from the stack.  The second case is 
-    an unhandled error. In either case, the loop exits with `Done`.
-    
-- If the list of tokens is non-empty the head token is dropped from the list
-  of tokens and either pushed onto the stack as `Left token` or converted to
-  an expression and pushed onto the list of committed expressions.  The token
-  is pushed onto the stack if the stack is non-empty or if it is a bracket
-  or an error.  This is carried out by function `pushToken`.
-  
-
-- After the token has been pushed or committed, the state is reduced and the loop is re-entered.
-
-## Reduction
-
-The reduce function operates by pattern matching on the stack, applying one of
-five rules, `F`, `A1`, `A2`, `A3`, or `M`, returning a record with the rule used
-and the result of applying it: 
-
-```
-reduce : List (Either Token Expr) 
-         -> { rule : Rule, result : List (Either Token Expr) }
+        Just token ->
+            pushToken token { state | tokenIndex = state.tokenIndex + 1 }
+                |> reduceState
+                |> Loop
+                
 ```
 
 
-- **Rule F,** *Form function:* `Left (S name _) :: Left (LB _) :: rest -> Right (Expr name []):: (Left LB _) :: rest`
+## Reducing the Stack
 
 
-- **Rule A1,** *Add argument:* `Left (S content _) :: Right (Expr name exprs) :: rest -> Right (Expr name (Text content :: exprs) :: rest`
-
-
-- **Rule A2,** *Add argument:* `Left (W content _) :: Right (Expr name exprs) :: rest -> Right (Expr name (Text content :: exprs) :: rest`
- 
- 
-- **Rule A3,** *Add argument:* `Right (E name' exprs' _) :: Right (Expr name exprs) :: rest -> Right (Expr name (E name' exprs' _ :: exprs) :: rest` 
-
-- **Rule M,** *Match brackets:* `Left (RB _) :: rest ->` (1) find the longest prefix of `rest` not containing token `LB`.  Mark the elements of this list as _evaluated_ by 
-applying the constructor `EV` to each of them.  (2) Let the suffix be the part of the stack obtained by dropping the prefix plus the next element. (3) return `prefix ++ suffix`.  In the returned value, the left-most pair `RB` ... `LB` has been deleted.
-
-The function `reduceState : State -> State` operates by first applying function 
-`reduce` to `state.stack` to update the state.  If rule `M` was applied, the bracket 
-count in `state` is decremented and updated. If in addition the bracket count is now zero, the function `reduceStateM` is applied to the updated state.
-
-The function `reduceStateM` commits the stack by reducing the stack, then converting 
-to an expression which is prepended to `committed`.
-
-
-```
-finalExpr = (reduce state.stack).result |> List.map unevaluated |> apply
-
-committed = finalExpr :: state.committed
-```
-
-The function `unevaluated` removes the wrapper `EV` if present.  The left-most
-element of the stack is of the form `Expr name exprs _` and the remaining elements
-are, after conversion to an `Expr` if need be, prepended to the list `exprs` to form a new expression.
