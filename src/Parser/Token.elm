@@ -1,5 +1,5 @@
 module Parser.Token exposing
-    ( Loc
+    ( Meta
     , Token(..)
     , TokenType(..)
     , codeParser
@@ -20,15 +20,15 @@ import Parser.Tools as PT exposing (Context, Problem)
 
 
 type Token
-    = LB Loc
-    | RB Loc
-    | S String Loc
-    | W String Loc
-    | VerbatimToken String String Loc
-    | TokenError (List (DeadEnd Context Problem)) Loc
+    = LB Meta
+    | RB Meta
+    | S String Meta
+    | W String Meta
+    | VerbatimToken String String Meta
+    | TokenError (List (DeadEnd Context Problem)) Meta
 
 
-type alias Loc =
+type alias Meta =
     { begin : Int, end : Int, index : Int }
 
 

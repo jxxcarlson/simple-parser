@@ -10,7 +10,7 @@ import Either exposing (Either(..))
 import List.Extra
 import Parser.Match as M
 import Parser.Symbol as Symbol exposing (Symbol(..))
-import Parser.Token as Token exposing (Loc, Token(..), TokenType(..))
+import Parser.Token as Token exposing (Meta, Token(..), TokenType(..))
 
 
 
@@ -18,9 +18,9 @@ import Parser.Token as Token exposing (Loc, Token(..), TokenType(..))
 
 
 type Expr
-    = Expr String (List Expr) Loc
-    | Text String Loc
-    | Verbatim String String Loc
+    = Expr String (List Expr) Meta
+    | Text String Meta
+    | Verbatim String String Meta
     | EV Expr
     | Error String
 
