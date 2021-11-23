@@ -1,57 +1,129 @@
-# About 'Simple'
+# About L0
 
-'Simple' is a small project to illustrate an approach to fault-tolerant parsing
-in the context of a simple markup language which we call L0. Here is a short paragraph
-in that language:
+L0 is a simple markup language which we use  to illustrate an approach to fault-tolerant parsing. Here is a short paragraph
+in L0:
 
 ```
 Pythagoras says that for a [i right] triangle, $a^2 + b^2 = c^2$, where 
 the letters denote the lengths of the altitude, base, and hypotenuse.
-Pythagoras ways [i [blue quite] the dude].
+Pythagoras was [i [blue quite] the dude]!
 ```
 
 In an expression like `[i right]`, the `i` stands for the italicize function and 
-`right` serves as an argument to that function.  In the expression 
+`right` serves as an argument to it.  In the expression 
 `[i [blue quite] the dude]`, "quite" is rendered in italicized blue text while "the dude" is simply italicized. Apart from special expressions like the one used for 
-mathematical text, L0 consists of ordinary text and expressions bounded by brackets
-of the kind you see here.  The syntax, of course, is inspired by Lisp.
+mathematical text and code,  L0 consists of ordinary text and expressions bounded 
+by brackets.The syntax, of course, is inspired by Lisp.
 
-The idea behind the parser is to first turn the source text into 
+The idea behind the parser is to first transform the source text into 
 a list of tokens, then convert the list of tokens into a list of expressions using
 a kind of shift-reduce parser.  The shift-reduce parser is a functional loop that
-operates on a value of type `State`, one field of which is a stack.  Tokens are either pushed directly to a list of committed expressions or onto the stack.  The stack is periodically reduced, producing an expression which is pushed onto the list of committed values.  The parser reaching the end of the token stream with a non-empty
-stack is the signal that there was a parse error. When this occurs, an error-handing strategy is invoked, the syntax tree is corrected where needed.  We will describe this strategy in detail below.
+operates on a value of type `State`, one field of which is a stack of tokens:
+
+```
+type alias State =
+    { step : Int
+    , tokens : List Token
+    , numberOfTokens : Int
+    , tokenIndex : Int
+    , committed : List Expr
+    , stack : List Token
+    }
+    
+run : State -> State
+run state =
+    loop state nextStep
+``` 
+
+The `nextStep` function operates as follows
+
+- Try to get the token at index `state.tokenIndex`; it will be either `Nothing`
+  `Just token`.
+- If the return value is `Nothing`, examine the stack. If it is empty, 
+  the loop is complete.  If it is nonempty, the stack could not be 
+  reduced.  This is an error, so we call `recoverFromError state`.
+- If the return value is `Just token`, push the token onto the stack or 
+  commit it immediately, depending on the nature of the token and 
+  whether the stack is empty.  Then increment 
+  `state.tokenIndex`, call `reduceStack` and then re-enter the loop.
+
+Below we describe
+
+- tokenizer
+- parser
+- error recovery
+
+Very briefly, error recovery works by pattern matching on the reversed stack. The push or commit strategy guarantees that the stack begins with a left bracket token. Then we proceed as follows:
+
+- If the reversed stack begins with two left brackets, push an error message onto 
+  `stack.committed`, set `state.tokenIndex` to the token index of the second
+   left bracket, clear the stack, and re-run the parser on the truncated token list.
+   
+- If the reversed stack begins with a left bracket followed by a text token which we
+  take to be a function name, push an error message onto `state.committed`, 
+  set `state.tokenIndex` to the token index of the function name plus one, clear
+  the stack, and re-run the parser on the truncated token list.
+  
+- Etc: a few more patterns.
+   
+In other words, when an error is encountered, we make note of the fact in `state.committed` and skip forward in the list of tokens in an attempt to recover from the error.  In this way two properties are guaranteed:
+
+
+- A syntax tree is built based on the full text.
+
+- Errors are signaled in the syntax tree and therefore in the rendered text.
+
+- Text following an error is not messed up.
+
+
+The last property is a consequence of the "greediness" of the recovery algorithm.
+
+
+
+
+
+
+
+
 
 ## Tokenizer
 
-```
--- module Token
+The tokenizer converts a string into a list of tokens, where
 
+
+```
 type Token
-    = LB Loc
-    | RB Loc
-    | S String Loc
-    | W String Loc
-    | VerbatimToken String String Loc
-    | TokenError (List (DeadEnd Context Problem)) Loc
+    = LB Meta
+    | RB Meta
+    | S String Meta
+    | W String Meta
+    | VerbatimToken String String Meta
+    | TokenError (List (DeadEnd Context Problem)) Meta
     
-type alias Loc =
-    { begin : Int, end : Int }
+type alias Meta =
+    { begin : Int, end : Int, index: Int }
 ```
 
-Here `LB` and `RB` stand for left and right-brackets, and `Loc` locates 
-the substring tokenized in the source text; 
+Here `LB` and `RB` stand for left and right-brackets;
 `S` stands for string data, which in practice means "words" (no interior spaces)
 and `W` stands for whitespace.  A `Verbatim` token is for math or code.  Thus
 
 ```
-> import Token
-> Token.run "[f a]"
-  [RB { begin = 4, end = 4 },S "a" { begin = 3, end = 3 },W (" ") 
-  { begin = 2, end = 2 },S "f" { begin = 1, end = 1 },LB { begin = 0, end = 0 }]
+> import Parser.Token exposing(..)
+> run "[i foo]" |> List.reverse
+  [ LB      { begin = 0, end = 0, index = 0 }
+  , S "i"   { begin = 1, end = 1, index = 1 }
+  , W (" ") { begin = 2, end = 2, index = 2 }
+  , S "foo" { begin = 3, end = 5, index = 3 }
+  , RB      { begin = 6, end = 6, index = 4 }
+  ]
 ```
 
-There is a companion method that gives less verbose output:
+The `Meta` components locates 
+the substring tokenized in the source text and also carries an index which locates
+a given token in a list of tokens.
+
+The `Token.run` function has a companion which gives less verbose output:
 
 ```
 > import Simple
@@ -72,9 +144,9 @@ The parser converts a list of tokens into a list of expressions, where
 
 ```
 type Expr
-    = Expr String (List Expr) Loc
-    | Text String Loc
-    | Verbatim String String Loc
+    = Expr String (List Expr) Meta
+    | Text String Meta
+    | Verbatim String String Meta
     | EV Expr
     | Error String
 ```
