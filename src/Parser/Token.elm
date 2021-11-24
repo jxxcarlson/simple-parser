@@ -39,7 +39,14 @@ type alias State a =
     , tokenIndex : Int
     , sourceLength : Int
     , tokens : List a
+    , mode : Mode
     }
+
+
+type Mode
+    = Normal
+    | InMath
+    | InCode
 
 
 type TokenType
@@ -134,7 +141,7 @@ length token =
 
 init : String -> State a
 init str =
-    { source = str, scanpointer = 0, sourceLength = String.length str, tokens = [], tokenIndex = 0 }
+    { source = str, scanpointer = 0, sourceLength = String.length str, tokens = [], tokenIndex = 0, mode = Normal }
 
 
 type alias TokenParser =
@@ -156,7 +163,7 @@ run source =
 -}
 get : State Token -> Int -> String -> Token
 get state start input =
-    case Parser.run (tokenParser state start state.tokenIndex) input of
+    case Parser.run (tokenParser state.mode start state.tokenIndex) input of
         Ok token ->
             token
 
@@ -177,20 +184,73 @@ nextStep state =
             newScanPointer =
                 state.scanpointer + length token + 1
         in
-        Loop { state | tokens = token :: state.tokens, scanpointer = newScanPointer, tokenIndex = state.tokenIndex + 1 }
+        Loop
+            { state
+                | tokens = token :: state.tokens
+                , scanpointer = newScanPointer
+                , tokenIndex = state.tokenIndex + 1
+                , mode = newMode token state.mode
+            }
+
+
+newMode : Token -> Mode -> Mode
+newMode token currentMode =
+    case currentMode of
+        Normal ->
+            case token of
+                MathToken _ ->
+                    InMath
+
+                CodeToken _ ->
+                    InCode
+
+                _ ->
+                    Normal
+
+        InMath ->
+            case token of
+                MathToken _ ->
+                    Normal
+
+                _ ->
+                    InMath
+
+        InCode ->
+            case token of
+                CodeToken _ ->
+                    Normal
+
+                _ ->
+                    InCode
 
 
 {-| Expression.Tokenizer.tokenParser calls L1.tokenParser
 with arguments tokenStack and start. The first argument
 is not used (although it is for the Markdown parser)
 -}
-tokenParser : a -> Int -> Int -> TokenParser
-tokenParser _ start index =
-    tokenParser_ start index
+tokenParser : Mode -> Int -> Int -> TokenParser
+tokenParser mode start index =
+    case mode of
+        Normal ->
+            tokenParser_ start index
+
+        InMath ->
+            mathParser_ start index
+
+        InCode ->
+            codeParser_ start index
 
 
 languageChars =
     [ '[', ']', '`', '$' ]
+
+
+mathChars =
+    [ '$' ]
+
+
+codeChars =
+    [ '`' ]
 
 
 tokenParser_ : Int -> Int -> TokenParser
@@ -200,6 +260,24 @@ tokenParser_ start index =
         , leftBracketParser start index
         , rightBracketParser start index
         , mathParser start index
+        , codeParser start index
+        , whiteSpaceParser start index
+        ]
+
+
+mathParser_ : Int -> Int -> TokenParser
+mathParser_ start index =
+    Parser.oneOf
+        [ mathTextParser start index
+        , mathParser start index
+        , whiteSpaceParser start index
+        ]
+
+
+codeParser_ : Int -> Int -> TokenParser
+codeParser_ start index =
+    Parser.oneOf
+        [ codeTextParser start index
         , codeParser start index
         , whiteSpaceParser start index
         ]
@@ -225,6 +303,16 @@ rightBracketParser start index =
 
 textParser start index =
     PT.text (\c -> not <| List.member c (' ' :: languageChars)) (\c -> not <| List.member c (' ' :: languageChars))
+        |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1, index = index })
+
+
+mathTextParser start index =
+    PT.text (\c -> not <| List.member c (' ' :: mathChars)) (\c -> not <| List.member c (' ' :: languageChars))
+        |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1, index = index })
+
+
+codeTextParser start index =
+    PT.text (\c -> not <| List.member c (' ' :: codeChars)) (\c -> not <| List.member c (' ' :: languageChars))
         |> Parser.map (\data -> S data.content { begin = start, end = start + data.end - data.begin - 1, index = index })
 
 
