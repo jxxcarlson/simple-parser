@@ -2,10 +2,10 @@ module Render.Settings exposing (Settings)
 
 
 type alias Settings =
-    { width : Int
-    , titleSize : Int
-    , paragraphSpacing : Int
-    , showTOC : Bool
-    , showErrorMessages : Bool
+    { paragraphSpacing : Int
     , selectedId : String
+    , showErrorMessages : Bool
+    , showTOC : Bool
+    , titleSize : Int
+    , width : Int
     }

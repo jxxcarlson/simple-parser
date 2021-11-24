@@ -405,7 +405,7 @@ defaultSettings =
 
 
 settings selectedId =
-    { defaultSettings | paragraphSpacing = 42, showErrorMessages = True, selectedId = selectedId }
+    { defaultSettings | width = 500, paragraphSpacing = 42, showErrorMessages = True, selectedId = selectedId }
 
 
 

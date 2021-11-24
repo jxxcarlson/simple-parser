@@ -87,6 +87,7 @@ markupDict =
         , ( "label", \g s exprList -> Element.none )
         , ( "cite", \g s exprList -> cite g s exprList )
         , ( "table", \g s exprList -> table g s exprList )
+        , ( "image", \g s exprList -> image g s exprList )
 
         -- MiniLaTeX stuff
         , ( "term", \g s exprList -> term g s exprList )
@@ -174,7 +175,7 @@ href_ url label =
 --         , ( "href", \g s exprList -> href g s exprList )
 
 
-image generation settings accumuator body =
+image generation settings body =
     let
         arguments : List String
         arguments =
