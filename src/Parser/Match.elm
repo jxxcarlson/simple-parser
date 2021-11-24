@@ -6,6 +6,19 @@ import Parser.Symbol as Symbol exposing (Symbol(..), value)
 reducible : List Symbol -> Bool
 reducible symbols =
     case List.head symbols of
+        Just M ->
+            List.head (List.reverse (List.drop 1 symbols)) == Just M
+
+        Just C ->
+            List.head (List.reverse (List.drop 1 symbols)) == Just C
+
+        _ ->
+            reducibleF symbols
+
+
+reducibleF : List Symbol -> Bool
+reducibleF symbols =
+    case List.head symbols of
         Nothing ->
             True
 
@@ -15,13 +28,19 @@ reducible symbols =
         Just O ->
             False
 
+        Just M ->
+            False
+
+        Just C ->
+            False
+
         Just L ->
             case match symbols of
                 Nothing ->
                     False
 
                 Just k ->
-                    reducible (List.drop 1 (deleteAt k symbols))
+                    reducibleF (List.drop 1 (deleteAt k symbols))
 
 
 {-|

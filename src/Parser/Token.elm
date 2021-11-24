@@ -24,7 +24,8 @@ type Token
     | RB Meta
     | S String Meta
     | W String Meta
-    | VerbatimToken String String Meta
+    | MathToken Meta
+    | CodeToken Meta
     | TokenError (List (DeadEnd Context Problem)) Meta
 
 
@@ -46,7 +47,8 @@ type TokenType
     | TRB
     | TS
     | TW
-    | TVerbatim
+    | TMath
+    | TCode
     | TTokenError
 
 
@@ -65,8 +67,11 @@ type_ token =
         W _ _ ->
             TW
 
-        VerbatimToken _ _ _ ->
-            TVerbatim
+        MathToken _ ->
+            TMath
+
+        CodeToken _ ->
+            TCode
 
         TokenError _ _ ->
             TTokenError
@@ -87,16 +92,11 @@ stringValue token =
         W str _ ->
             str
 
-        VerbatimToken name str _ ->
-            case name of
-                "math" ->
-                    "$" ++ str ++ "$"
+        MathToken _ ->
+            "$"
 
-                "code" ->
-                    "`" ++ str ++ "`"
-
-                _ ->
-                    "unrecognized verbatim token"
+        CodeToken _ ->
+            "`"
 
         TokenError _ _ ->
             "tokenError"
@@ -119,7 +119,10 @@ length token =
         S _ meta ->
             meta.end - meta.begin
 
-        VerbatimToken _ _ meta ->
+        MathToken meta ->
+            meta.end - meta.begin
+
+        CodeToken meta ->
             meta.end - meta.begin
 
         W _ meta ->
@@ -194,10 +197,10 @@ tokenParser_ : Int -> Int -> TokenParser
 tokenParser_ start index =
     Parser.oneOf
         [ textParser start index
-        , mathParser start index
-        , codeParser start index
         , leftBracketParser start index
         , rightBracketParser start index
+        , mathParser start index
+        , codeParser start index
         , whiteSpaceParser start index
         ]
 
@@ -227,14 +230,14 @@ textParser start index =
 
 mathParser : Int -> Int -> TokenParser
 mathParser start index =
-    PT.textWithEndSymbol "$" (\c -> c == '$') (\c -> c /= '$')
-        |> Parser.map (\data -> VerbatimToken "math" (String.dropRight 1 (String.dropLeft 1 data.content)) { begin = start, end = start + data.end - data.begin - 1, index = index })
+    PT.text (\c -> c == '$') (\_ -> False)
+        |> Parser.map (\_ -> MathToken { begin = start, end = start, index = index })
 
 
 codeParser : Int -> Int -> TokenParser
 codeParser start index =
-    PT.textWithEndSymbol "`" (\c -> c == '`') (\c -> c /= '`')
-        |> Parser.map (\data -> VerbatimToken "code" (String.dropRight 1 (String.dropLeft 1 data.content)) { begin = start, end = start + data.end - data.begin - 1, index = index })
+    PT.text (\c -> c == '`') (\_ -> False)
+        |> Parser.map (\_ -> CodeToken { begin = start, end = start, index = index })
 
 
 

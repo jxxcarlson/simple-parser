@@ -8,6 +8,8 @@ type Symbol
     = L
     | R
     | O
+    | M
+    | C
 
 
 value : Symbol -> Int
@@ -20,6 +22,12 @@ value symbol =
             -1
 
         O ->
+            0
+
+        M ->
+            0
+
+        C ->
             0
 
 
@@ -39,6 +47,12 @@ symbolToString symbol =
 
         O ->
             "O"
+
+        M ->
+            "M"
+
+        C ->
+            "C"
 
 
 toString : List Symbol -> String
@@ -64,6 +78,12 @@ toSymbol token =
 
         RB _ ->
             Just R
+
+        MathToken _ ->
+            Just M
+
+        CodeToken _ ->
+            Just C
 
         _ ->
             Nothing

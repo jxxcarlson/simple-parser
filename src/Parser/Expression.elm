@@ -75,6 +75,10 @@ run state =
 
 nextStep : State -> Step State State
 nextStep state =
+    let
+        _ =
+            Debug.log "nextStep, STACK" state.stack
+    in
     case List.Extra.getAt state.tokenIndex state.tokens of
         Nothing ->
             if List.isEmpty state.stack then
@@ -85,7 +89,12 @@ nextStep state =
                 recoverFromError state
 
         Just token ->
+            let
+                _ =
+                    Debug.log "nextStep, TOKEN" token
+            in
             pushToken token { state | tokenIndex = state.tokenIndex + 1 }
+                |> Debug.log "pushToken"
                 |> reduceState
                 |> (\st -> { st | step = st.step + 1 })
                 |> Loop
@@ -104,21 +113,24 @@ pushToken token state =
         W _ _ ->
             pushOrCommit token state
 
-        VerbatimToken _ _ _ ->
-            pushOrCommit token state
+        MathToken _ ->
+            pushOnStack token state
+
+        CodeToken _ ->
+            pushOnStack token state
 
         LB _ ->
-            pushLeft token state
+            pushOnStack token state
 
         RB _ ->
-            pushLeft token state
+            pushOnStack token state
 
         TokenError _ _ ->
-            pushLeft token state
+            pushOnStack token state
 
 
-pushLeft : Token -> State -> State
-pushLeft token state =
+pushOnStack : Token -> State -> State
+pushOnStack token state =
     { state | stack = token :: state.stack }
 
 
@@ -150,9 +162,6 @@ exprOfToken token =
         W str loc ->
             Just (Text str loc)
 
-        VerbatimToken name str loc ->
-            Just (Verbatim name str loc)
-
         _ ->
             Nothing
 
@@ -168,8 +177,26 @@ push token state =
 
 reduceState : State -> State
 reduceState state =
-    if M.reducible (state.stack |> Symbol.convertTokens |> List.reverse) then
-        { state | stack = [], committed = eval (state.stack |> List.reverse) ++ state.committed }
+    let
+        _ =
+            Debug.log "REDUCIBLE" (M.reducible (state.stack |> Symbol.convertTokens |> List.reverse))
+
+        symbols =
+            state.stack |> Symbol.convertTokens |> List.reverse
+    in
+    if M.reducible symbols then
+        case List.head symbols of
+            Just L ->
+                { state | stack = [], committed = eval (state.stack |> List.reverse) ++ state.committed }
+
+            Just M ->
+                { state | stack = [], committed = Verbatim "math" (Token.toString <| unbracket <| List.reverse state.stack) { begin = 0, end = 0, index = 0 } :: state.committed }
+
+            Just C ->
+                { state | stack = [], committed = Verbatim "code" (Token.toString <| unbracket <| List.reverse state.stack) { begin = 0, end = 0, index = 0 } :: state.committed }
+
+            _ ->
+                state
 
     else
         state
@@ -310,6 +337,46 @@ recoverFromError state =
             Done
                 { state
                     | committed = errorMessage "[...?" :: state.committed
+                    , stack = []
+                    , tokenIndex = 0
+                    , numberOfTokens = 0
+                }
+
+        (MathToken _) :: rest ->
+            let
+                content =
+                    Token.toString rest
+
+                message =
+                    if content == "" then
+                        "$?$"
+
+                    else
+                        "$" ++ Token.toString rest ++ "$?"
+            in
+            Done
+                { state
+                    | committed = errorMessage message :: state.committed
+                    , stack = []
+                    , tokenIndex = 0
+                    , numberOfTokens = 0
+                }
+
+        (CodeToken _) :: rest ->
+            let
+                content =
+                    Token.toString rest
+
+                message =
+                    if content == "" then
+                        "`?`"
+
+                    else
+                        "`" ++ Token.toString rest ++ "`"
+            in
+            Done
+                { state
+                    | committed = errorMessage message :: state.committed
                     , stack = []
                     , tokenIndex = 0
                     , numberOfTokens = 0
