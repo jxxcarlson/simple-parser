@@ -6,14 +6,14 @@ in L0:
 ```
 Pythagoras says that for a [i right] triangle, $a^2 + b^2 = c^2$, where 
 the letters denote the lengths of the altitude, base, and hypotenuse.
-Pythagoras was [i [blue quite] the dude]!
+Pythagoras was [i [blue quite] the dude]! Still, he didn't know about
+code: `fact(n) = if n == 0 then 1 else n*fact(n-1)`.
 ```
 
 In an expression like `[i right]`, the `i` stands for the italicize function and 
 `right` serves as an argument to it.  In the expression 
-`[i [blue quite] the dude]`, "quite" is rendered in italicized blue text while "the dude" is simply italicized. Apart from special expressions like the one used for 
-mathematical text and code,  L0 consists of ordinary text and expressions bounded 
-by brackets.The syntax, of course, is inspired by Lisp.
+`[i [blue quite] the dude]`, "quite" is rendered in italicized blue text while "the dude" is simply italicized. Apart from special expressions like the ones used for 
+mathematical text and code,  L0 consists of ordinary text and the Lisp-like expressions bounded  by brackets.
 
 The idea behind the parser is to first transform the source text into 
 a list of tokens, then convert the list of tokens into a list of expressions using
@@ -36,7 +36,7 @@ run state =
 
 The `nextStep` function operates as follows
 
-- Try to get the token at index `state.tokenIndex`; it will be either `Nothing`
+- Try to get the token at index `state.tokenIndex`; it will be either `Nothing`or
   `Just token`.
 - If the return value is `Nothing`, examine the stack. If it is empty, 
   the loop is complete.  If it is nonempty, the stack could not be 
@@ -46,7 +46,7 @@ The `nextStep` function operates as follows
   whether the stack is empty.  Then increment 
   `state.tokenIndex`, call `reduceStack` and then re-enter the loop.
 
-Below we describe the tokenizer, the parser, and error recovery. Very briefly, error recovery works by pattern matching on the reversed stack. The push or commit strategy guarantees that the stack begins with a left bracket token. Then we proceed as follows:
+Below we describe the tokenizer, the parser, and error recovery. Very briefly, error recovery works by pattern matching on the reversed stack. The push or commit strategy guarantees that the stack begins with a left bracket token, a math token, or a code token. Then we proceed as follows:
 
 - If the reversed stack begins with two left brackets, push an error message onto 
   `stack.committed`, set `state.tokenIndex` to the token index of the second
@@ -57,7 +57,7 @@ Below we describe the tokenizer, the parser, and error recovery. Very briefly, e
   set `state.tokenIndex` to the token index of the function name plus one, clear
   the stack, and re-run the parser on the truncated token list.
   
-- Etc: a few more patterns.
+- Etc: a few more patterns, e.g., for code and math.
    
 In other words, when an error is encountered, we make note of the fact in `state.committed` and skip forward in the list of tokens in an attempt to recover from the error.  In this way two properties are guaranteed:
 
@@ -90,7 +90,8 @@ type Token
     | RB Meta
     | S String Meta
     | W String Meta
-    | VerbatimToken String String Meta
+    | MathToken Meta
+    | CodeToken Meta
     | TokenError (List (DeadEnd Context Problem)) Meta
     
 type alias Meta =
@@ -99,17 +100,23 @@ type alias Meta =
 
 Here `LB` and `RB` stand for left and right-brackets;
 `S` stands for string data, which in practice means "words" (no interior spaces)
-and `W` stands for whitespace.  A `Verbatim` token is for math or code.  Thus
+and `W` stands for whitespace.  The string "$" generates a `MathToken`, 
+while a backtick generates a `CodeToken.`  Thus
 
 ```
 > import Parser.Token exposing(..)
-> run "[i foo]" |> List.reverse
-  [ LB      { begin = 0, end = 0, index = 0 }
-  , S "i"   { begin = 1, end = 1, index = 1 }
-  , W (" ") { begin = 2, end = 2, index = 2 }
-  , S "foo" { begin = 3, end = 5, index = 3 }
-  , RB      { begin = 6, end = 6, index = 4 }
-  ]
+> run "[i foo] $x^2$" |> List.reverse
+  [  LB        { begin = 0, end = 0, index = 0   }
+   , S "i"     { begin = 1, end = 1, index = 1   }
+   , W (" ")   { begin = 2, end = 2, index = 2   }
+   , S "foo".  { begin = 3, end = 5, index = 3   }
+   , RB        { begin = 6, end = 6, index = 4   }
+   , W (" ")   { begin = 7, end = 7, index = 5   }
+   , MathToken { begin = 8, end = 8, index = 6   }
+   , S "x^2"   { begin = 9, end = 11, index = 7  }
+   , MathToken { begin = 12, end = 12, index = 8 }
+ ]
+   
 ```
 
 The `Meta` components locates 
@@ -121,27 +128,22 @@ The `Token.run` function has a companion which gives less verbose output:
 ```
 > import Simple
 
-> Simple.tokenize "[f a]" |> List.reverse
-  [LBS, SS "f", WS (" "), SS "a", RBS]
-  
-> Simple.tokenize "$a^2 + b^2 = c^2$"
-  [VerbatimTokenS "math" ("$a^2 + b^2 = c^2$")]
-  
-> Simple.tokenize "`a[0] = 1`"
-  [VerbatimTokenS "code" ("`a[0] = 1`")]
+> Simple.tokenize "[i foo] $x^2$" |> List.reverse
+  [LBS,SS "i",WS (" "),SS "foo",RBS,WS (" "),MathTokenS,SS "x^2",MathTokenS]
 ```
 
+This is useful for debugging.
 
 
 ## Parser
 
 We briefly sketched the operation of the parser in the introduction.  Here we give some more detail.  The functional loop is controlled by the `nextStep` function listed 
 below.  If retrieving a new token at index `state.tokenIndex` fails, there are two 
-alternatives. If the stack is empty, then all tokens have successfully parsed, and the 
+alternatives. If the stack is empty, then all tokens have been successfully parsed, and the 
 parse tree stored in `state.committed` represents the full input text.  If the stack 
 is non-empty, then that is not true, and so an error recovery strategy is invoked.  
 
-If  a new token is acquired, it is either converted to an expression and pushed onto `state.committed`, or pushed onto the stack.  Some tokens, such as those for math or code, are always converted and committed.  Other tokens, such as those representing a word of source text, are pushed to the stack if the stack is non-empty and are converted and pushed to `state.converted` otherwise.  Finally, tokens such as those representing left and right braces are always pushed onto the stack.
+If  a new token is acquired, it is either converted to an expression and pushed onto `state.committed`, or pushed onto the stack.  Tokens such as those representing a word of source text, are pushed to the stack if the stack is non-empty and are converted and pushed to `state.converted` otherwise.  Tokens such as those representing left and right braces or math and code tokens are always pushed onto the stack.
 
 Once a token is either pushed or committed, the stack is reduced. We describe this 
 process below.
@@ -169,6 +171,52 @@ nextStep state =
                 
 ```
 
+
+## The Reducibility Algorithm
+
+To determine reducibility of a list of tokens, that list is first 
+converted to a list of symbols, where
+
+```
+type Symbol = L | R | M | C | O
+```
+
+That is, left or right bracket, math or code token, or something else. 
+Reducibility is a property of the corresponding reversed symbol list:
+
+- If the symbol list starts and ends with `M`, it is reducible.
+
+- If the symbol list starts and ends with `C`, it is reducible.
+
+- If the symbol list starts and ends with `LB`, we apply the function `reducible`.
+  If the list is empty, return True.  If it is nonempty, find the first matching `RB`;
+  delete it and the initial `LB` and apply `reducible` to what remains.
+  
+The first matching `RB` is computed as follows.  Assign a value of +1 to `LB`,
+-1 to `RB`, and 0 to `O`.  Then compute cumulative sums of the list of values.
+The index of the first cumulative sum to be zero, if it exists, defines the match.
+
+Example 1:
+
+```
+ L,  O,  R,  L,  O,  O,  R
++1,  0, -1, +1,  0,  0, -1
++1, +1,  0, ...
+```
+
+The first `R` is the match.
+
+
+Example 2:
+
+
+```
+ L,  O,  L,  O,  O,  O,  R,  R
++1,  0, +1,  0,  0,  0, -1, -1
++1, +1, +2, +2, +2, +2, +1,  0
+```
+
+The last `R` is the match.
 
 ## Reducing the Stack
 
@@ -207,7 +255,7 @@ Function `evalList`
 *NOTE:* `eval` and `evalList` call eachother.
 
 
-## The Reducibility Algorithm
+
 
 
 ## Error Recovery

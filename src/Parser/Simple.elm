@@ -29,7 +29,8 @@ type SimpleToken
     | RBS
     | SS String
     | WS String
-    | VerbatimTokenS String String
+    | MathTokenS
+    | CodeTokenS
     | TokenErrorS (List (DeadEnd Context Problem))
 
 
@@ -68,8 +69,11 @@ simplifyToken token =
         W str _ ->
             WS str
 
-        VerbatimToken name str _ ->
-            VerbatimTokenS name str
+        MathToken _ ->
+            MathTokenS
+
+        CodeToken _ ->
+            CodeTokenS
 
         TokenError list _ ->
             TokenErrorS list
