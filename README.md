@@ -204,6 +204,9 @@ correct form, then a one-element list of expressions noting an error is returned
 Function `evalList` 
 
 
+*NOTE:* `eval` and `evalList` call eachother.
+
+
 ## The Reducibility Algorithm
 
 
