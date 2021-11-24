@@ -270,6 +270,11 @@ errorMessage message =
     Expr "red" [ Text message dummyLoc ] dummyLoc
 
 
+errorMessageBold : String -> Expr
+errorMessageBold message =
+    Expr "bold" [ Expr "red" [ Text message dummyLoc ] dummyLoc ] dummyLoc
+
+
 errorMessage2 : String -> Expr
 errorMessage2 message =
     Expr "blue" [ Text message dummyLoc ] dummyLoc
@@ -342,7 +347,7 @@ recoverFromError state =
                     , numberOfTokens = 0
                 }
 
-        (MathToken _) :: rest ->
+        (MathToken meta) :: rest ->
             let
                 content =
                     Token.toString rest
@@ -352,17 +357,17 @@ recoverFromError state =
                         "$?$"
 
                     else
-                        "$" ++ Token.toString rest ++ "$?"
+                        "$ "
             in
-            Done
+            Loop
                 { state
                     | committed = errorMessage message :: state.committed
                     , stack = []
-                    , tokenIndex = 0
+                    , tokenIndex = meta.index + 1
                     , numberOfTokens = 0
                 }
 
-        (CodeToken _) :: rest ->
+        (CodeToken meta) :: rest ->
             let
                 content =
                     Token.toString rest
@@ -372,13 +377,13 @@ recoverFromError state =
                         "`?`"
 
                     else
-                        "`" ++ Token.toString rest ++ "`"
+                        "` "
             in
-            Done
+            Loop
                 { state
-                    | committed = errorMessage message :: state.committed
+                    | committed = errorMessageBold message :: state.committed
                     , stack = []
-                    , tokenIndex = 0
+                    , tokenIndex = meta.index + 1
                     , numberOfTokens = 0
                 }
 
