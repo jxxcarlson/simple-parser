@@ -50,7 +50,7 @@ renderVerbatim name generation settings meta str =
 renderMarked name generation settings exprList =
     case Dict.get name markupDict of
         Nothing ->
-            Element.el [ Font.color errorColor ] (Element.text name)
+            Element.paragraph [ spacing 8 ] (Element.el [ Font.color errorColor, Font.bold ] (Element.text name) :: List.map (render generation settings) exprList)
 
         Just f ->
             f generation settings exprList
@@ -64,7 +64,9 @@ markupDict =
         , ( "numberedItem", \g s exprList -> numberedItem g s exprList )
         , ( "strong", \g s exprList -> strong g s exprList )
         , ( "bold", \g s exprList -> strong g s exprList )
+        , ( "b", \g s exprList -> strong g s exprList )
         , ( "italic", \g s exprList -> italic g s exprList )
+        , ( "i", \g s exprList -> italic g s exprList )
         , ( "boldItalic", \g s exprList -> boldItalic g s exprList )
         , ( "red", \g s exprList -> red g s exprList )
         , ( "blue", \g s exprList -> blue g s exprList )
