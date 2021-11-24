@@ -200,10 +200,10 @@ eval tokens =
                 [ Expr name (evalList (List.drop 1 args)) meta ]
 
             Nothing ->
-                [ errorMessage "..." ]
+                [ errorMessage "[ ]?" ]
 
             _ ->
-                [ errorMessage2 "error: expecting '[f ... ]' — missing brackets or function name" ]
+                [ errorMessage <| "[" ++ Token.toString args ++ "]?" ]
 
     else
         []
@@ -268,11 +268,8 @@ colorFirstElementRed state =
 addErrorMessage : String -> State -> State
 addErrorMessage message state =
     let
-        _ =
-            Debug.log "STATE, COMMITTED (1)" state.committed
-
         committed =
-            errorMessage (Debug.log "MESSAGE" message) :: state.committed |> Debug.log "STATE, COMMITTED (2)"
+            errorMessage message :: state.committed
     in
     { state | committed = committed }
 
@@ -284,11 +281,15 @@ isReducible tokens =
 
 recoverFromError : State -> Step State State
 recoverFromError state =
-    let
-        _ =
-            Debug.log "recoverFromError, STACK" ( List.length state.stack, List.reverse state.stack )
-    in
     case List.reverse state.stack of
+        (LB _) :: (RB meta) :: rest ->
+            Loop
+                { state
+                    | committed = errorMessage "[?]" :: state.committed
+                    , stack = []
+                    , tokenIndex = meta.index + 1
+                }
+
         (LB _) :: (LB meta) :: rest ->
             Loop
                 { state
@@ -333,14 +334,11 @@ errorSuffix rest =
 recoverFromError1 : State -> Step State State
 recoverFromError1 state =
     let
-        _ =
-            Debug.log "RECOVER FROM ERROR" ( 1, state.stack )
-
         k =
             Symbol.balance <| Symbol.convertTokens (List.reverse state.stack)
 
         newStack =
-            List.repeat k (RB dummyLoc) ++ state.stack |> Debug.log "newStack"
+            List.repeat k (RB dummyLoc) ++ state.stack
 
         newSymbols =
             Symbol.convertTokens (List.reverse newStack)
@@ -373,21 +371,15 @@ braceError : Int -> Expr
 braceError k =
     if k < 0 then
         let
-            _ =
-                Debug.log "k" -k
-
             braces =
-                List.repeat -k "]" |> String.join "" |> Debug.log "BRACES"
+                List.repeat -k "]" |> String.join ""
         in
         errorMessage2 <| " " ++ braces ++ " << Too many right braces (" ++ String.fromInt -k ++ ")"
 
     else
         let
-            _ =
-                Debug.log "k" -k
-
             braces =
-                List.repeat k "[" |> String.join "" |> Debug.log "BRACES"
+                List.repeat k "[" |> String.join ""
         in
         errorMessage2 <| " " ++ braces ++ " << Too many left braces (" ++ String.fromInt k ++ ")"
 
