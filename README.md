@@ -172,4 +172,46 @@ nextStep state =
 
 ## Reducing the Stack
 
+Function `reduceState` operates as follows.  It first determines, using function
+`Parser.Match.reducible`, whether the stack is reducible.  We describe the algorithm
+for this below.  If it is reducible, then the we apply 
+
+
+```
+eval : List Token -> List Expr
+```
+
+The result of this function application is prepended to `state.committed` and the stack is cleared.  If the stack is not reducible, then the state is passed on unchanged, eventually to be dealt with by the error recovery mechanism.
+
+The `eval` function belies the affinity of L0 with Lisp, albeit at a 
+far lower level of sophistication.  It operates as follows.  First, the reversed
+stack is examined to see if it begins with `LB` token and ends with the `RB` token.
+In that case the reversed token list has the form 
+
+```
+  LB _ :: token :: ... args ... :: RB _ :: []
+```
+
+If `token` is of the form `S fName _`, then we can form
+
+```
+  Expr fName (evalList args)
+```
+
+where `evalList : List Token -> List Expr`.  If the reversed stack does not have the 
+correct form, then a one-element list of expressions noting an error is returned.  
+
+Function `evalList` 
+
+
+## The Reducibility Algorithm
+
+
+## Error Recovery
+
+
+
+
+
+
 

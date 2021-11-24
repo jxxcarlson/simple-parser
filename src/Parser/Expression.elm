@@ -292,7 +292,7 @@ recoverFromError state =
         (LB _) :: (LB meta) :: rest ->
             Loop
                 { state
-                    | committed = errorMessage ("[" ++ errorSuffix rest) :: state.committed
+                    | committed = errorMessage "[" :: state.committed
                     , stack = []
                     , tokenIndex = meta.index
                 }
