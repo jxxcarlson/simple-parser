@@ -14,6 +14,7 @@ import Html exposing (Html)
 import Html.Attributes as HtmlAttr exposing (attribute)
 import Html.Events exposing (keyCode, on, onClick, onInput)
 import Json.Decode
+import L0
 import Parser.Expression
 import Process
 import Render.Elm as Elm
@@ -384,8 +385,7 @@ renderedText model =
 render : String -> Int -> List (Element Msg)
 render sourceText count =
     sourceText
-        |> Parser.Expression.parse_
-        |> List.map (\expr -> Elm.render 0 defaultSettings expr)
+        |> L0.renderFromString count defaultSettings
         |> List.map (Element.map Render)
 
 
