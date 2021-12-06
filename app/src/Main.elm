@@ -80,11 +80,24 @@ type alias Flags =
 
 initialText =
     """
+
+
 This is a [b [i real]] test.
 
 This is math: $a^2 + b^2 = c^2$
 
-More stuff.
+More stuff
+
+|| math
+\\int_0^1 x^n dx = \\frac{1}{n+1}
+
+And still more stuff
+
+$$
+\\int_0^1 x^n dx = \\frac{1}{n+1}
+
+And more and more ...
+
 """
 
 

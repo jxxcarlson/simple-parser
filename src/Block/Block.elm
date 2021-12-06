@@ -1,5 +1,7 @@
-module Block.Block exposing (testResult, testResult2)
+module Block.Block exposing (BlockType(..), L0BlockE(..), toL0Block, toL0BlockE)
 
+import Either exposing (Either(..))
+import Parser.Expression exposing (Expr(..))
 import Tree.Blocks exposing (Block)
 
 
@@ -12,6 +14,55 @@ type L0Block
         , content : String
         , children : List L0Block
         }
+
+
+type L0BlockE
+    = L0BlockE
+        { name : Maybe String
+        , args : List String
+        , indent : Int
+        , blockType : BlockType
+        , content : Either String (List Expr)
+        , children : List L0BlockE
+        }
+
+
+toL0BlockE : Block -> L0BlockE
+toL0BlockE block =
+    let
+        blockType =
+            classify block
+    in
+    case blockType of
+        Paragraph ->
+            L0BlockE
+                { name = Nothing
+                , args = []
+                , indent = block.indent
+                , content = Right (Parser.Expression.parse_ block.content)
+                , blockType = blockType
+                , children = []
+                }
+
+        OrdinaryBlock args ->
+            L0BlockE
+                { name = List.head args
+                , args = List.drop 1 args
+                , indent = block.indent
+                , content = Right (Parser.Expression.parse_ block.content)
+                , blockType = blockType
+                , children = []
+                }
+
+        VerbatimBlock args ->
+            L0BlockE
+                { name = List.head args
+                , args = List.drop 1 args
+                , indent = block.indent
+                , content = Left block.content
+                , blockType = blockType
+                , children = []
+                }
 
 
 toL0Block : Block -> L0Block
@@ -69,6 +120,9 @@ classify block =
 
     else if String.left 1 str_ == "|" then
         OrdinaryBlock (str_ |> String.lines |> List.head |> Maybe.withDefault "" |> String.words |> List.drop 1)
+
+    else if String.left 2 str_ == "$$" then
+        VerbatimBlock [ "math" ]
 
     else
         Paragraph
