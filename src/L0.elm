@@ -5,14 +5,14 @@ import Parser.Expression
 import Render.Elm
 import Render.Msg exposing (MarkupMsg)
 import Render.Settings exposing (Settings)
+import Tree.Blocks
 
 
 renderFromString : Int -> Settings -> String -> List (Element MarkupMsg)
 renderFromString count settings sourceText =
     sourceText
-        |> Parser.Expression.parse_
-        |> List.map (\expr -> Render.Elm.render 0 settings expr)
-
-
-
--- |> List.map (Element.map Render)
+        |> Tree.Blocks.fromStringAsParagraphs
+        |> Debug.log "PARAGRAPHS"
+        |> List.map (.content >> Parser.Expression.parse_)
+        |> List.map (List.map (\expr -> Render.Elm.render count settings expr))
+        |> List.map (\x -> Element.paragraph [] x)

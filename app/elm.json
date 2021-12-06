@@ -18,16 +18,22 @@
             "elm-community/maybe-extra": "5.2.0",
             "elm-community/result-extra": "2.4.0",
             "elm-community/string-extra": "4.0.1",
+            "jxxcarlson/elm-tree-builder": "3.0.1",
             "mdgriffith/elm-ui": "1.1.8",
             "rtfeldman/console-print": "1.0.1",
             "toastal/either": "3.6.3"
         },
         "indirect": {
             "elm/bytes": "1.0.8",
+            "elm/random": "1.0.0",
             "elm/regex": "1.0.0",
+            "elm/svg": "1.0.1",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
-            "elm/virtual-dom": "1.0.2"
+            "elm/virtual-dom": "1.0.2",
+            "jxxcarlson/htree": "2.0.1",
+            "jxxcarlson/tree-extra": "1.0.1",
+            "zwilias/elm-rosetree": "1.5.0"
         }
     },
     "test-dependencies": {

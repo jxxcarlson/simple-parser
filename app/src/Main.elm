@@ -79,7 +79,13 @@ type alias Flags =
 
 
 initialText =
-    "This is a ["
+    """
+This is a [b [i real]] test.
+
+This is math: $a^2 + b^2 = c^2$
+
+More stuff.
+"""
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -365,8 +371,8 @@ wordCountElement str =
 
 renderedText : Model -> Element Msg
 renderedText model =
-    paragraph
-        [ spacing 8
+    column
+        [ spacing 24
         , paddingXY 24 36
         , width (px panelWidth_)
         , height (px (innerPanelHeight model))
