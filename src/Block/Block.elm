@@ -1,121 +1,128 @@
-module Block.Block exposing (..)
+module Block.Block exposing (testResult, testResult2)
 
-import Block.Line as Line exposing (LineType(..))
+import Tree.Blocks exposing (Block)
 
 
-type Block
-    = Block
+type L0Block
+    = L0Block
         { name : Maybe String
+        , args : List String
+        , indent : Int
+        , blockType : BlockType
         , content : String
-        , children : List Block
+        , children : List L0Block
         }
 
 
-type alias State =
-    { blocks : List Block
-    , workingBlock : Maybe Block
-    , currentBlock : Maybe Block
-    , lines : List String
-    , indent : Int
-    , previousLineType : LineType
-    }
+toL0Block : Block -> L0Block
+toL0Block block =
+    let
+        blockType =
+            classify block
+    in
+    case blockType of
+        Paragraph ->
+            L0Block
+                { name = Nothing
+                , args = []
+                , indent = block.indent
+                , content = block.content
+                , blockType = blockType
+                , children = []
+                }
+
+        OrdinaryBlock args ->
+            L0Block
+                { name = List.head args
+                , args = List.drop 1 args
+                , indent = block.indent
+                , content = block.content
+                , blockType = blockType
+                , children = []
+                }
+
+        VerbatimBlock args ->
+            L0Block
+                { name = List.head args
+                , args = List.drop 1 args
+                , indent = block.indent
+                , content = block.content
+                , blockType = blockType
+                , children = []
+                }
 
 
-init lines =
-    { blocks = []
-    , workingBlock = Nothing
-    , currentBlock = Nothing
-    , lines = lines
-    , indent = 0
-    , previousLineType = Blank
-    }
+type BlockType
+    = Paragraph
+    | OrdinaryBlock (List String)
+    | VerbatimBlock (List String)
 
 
-nextStep : State -> Step State State
-nextStep state =
-    case List.head state.lines of
-        Nothing ->
-            Done state
+classify : Block -> BlockType
+classify block =
+    let
+        str_ =
+            String.trim block.content
+    in
+    if String.left 2 str_ == "||" then
+        VerbatimBlock (str_ |> String.lines |> List.head |> Maybe.withDefault "" |> String.words |> List.drop 1)
 
-        Just line ->
-            let
-                lineType =
-                    Line.classifyLine line
-            in
-            case compare (Line.indentOf lineType) (Line.indentOf state.previousLineType) of
-                GT ->
-                    Loop state
+    else if String.left 1 str_ == "|" then
+        OrdinaryBlock (str_ |> String.lines |> List.head |> Maybe.withDefault "" |> String.words |> List.drop 1)
 
-                EQ ->
-                    Loop state
-
-                LT ->
-                    Loop state
+    else
+        Paragraph
 
 
-
---if Line.isBlank state.previousLineType && Line.isBlank lineType then
---    if Line.indentOf lineType == 0 then
---        Loop <| commitBlock state
---
---    else
---        Loop <| terminateBlock "" state
---
---else if Line.indentOf lineType < state.indent then
---    Loop <| beginBlock lineType line state
---
---else if Line.indentOf lineType > state.indent then
---    Loop <| beginBlock lineType line state
---
---else
---    -- addToBlock line state
---    Done state
+a =
+    """
+one
+two
+three
+"""
 
 
-commitBlock : State -> State
-commitBlock state =
-    case state.workingBlock of
-        Nothing ->
-            state
-
-        Just block ->
-            { state | blocks = block :: state.blocks, currentBlock = Nothing, workingBlock = Nothing }
-
-
-terminateBlock : String -> State -> State
-terminateBlock line state =
-    case ( state.workingBlock, state.currentBlock ) of
-        ( Just (Block workingData), Just (Block currentData) ) ->
-            state
-
-        --let
-        --    newBlock =
-        --       Block { data | content = data.content ++ "\n" ++ line }
-        --in
-        --{ state | blocks = newBlock :: state.blocks }
-        _ ->
-            state
+b =
+    """
+|| a b c
+one
+two
+three
+"""
 
 
-beginBlock : LineType -> String -> State -> State
-beginBlock type_ line state =
-    state
+c =
+    """
+| a b c
+one
+two
+three
+"""
 
 
+test : String -> List BlockType
+test s =
+    s
+        |> Tree.Blocks.fromStringAsParagraphs
+        |> Debug.log "BLOCKS"
+        |> List.map classify
 
--- LOOP
+
+test2 : String -> List L0Block
+test2 s =
+    s
+        |> Tree.Blocks.fromStringAsParagraphs
+        |> Debug.log "BLOCKS"
+        |> List.map toL0Block
 
 
-type Step state a
-    = Loop state
-    | Done a
+str =
+    [ a, b, c ] |> String.join "\n\n"
 
 
-loop : state -> (state -> Step state a) -> a
-loop s f =
-    case f s of
-        Loop s_ ->
-            loop s_ f
+testResult =
+    test str
 
-        Done b ->
-            b
+
+testResult2 =
+    test2 str
