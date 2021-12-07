@@ -2,9 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Browser.Dom as Dom
-import Data.L1Test
-import Data.MarkdownTest
-import Data.MiniLaTeXTest
+import Data.TestDoc
 import Element exposing (..)
 import Element.Background as Background
 import Element.Font as Font
@@ -15,9 +13,7 @@ import Html.Attributes as HtmlAttr exposing (attribute)
 import Html.Events exposing (keyCode, on, onClick, onInput)
 import Json.Decode
 import L0
-import Parser.Expression
 import Process
-import Render.Elm as Elm
 import Render.Msg exposing (MarkupMsg)
 import Render.Settings exposing (Settings)
 import Task exposing (Task)
@@ -78,44 +74,9 @@ type alias Flags =
     { width : Int, height : Int }
 
 
-initialText =
-    """
-
-
-This is a [b [i real]] test.
-
-This is math: $a^2 + b^2 = c^2$
-
-More stuff
-
-|| math
-\\int_0^1 x^n dx = \\frac{1}{n+1}
-
-And still more stuff
-
-$$
-\\int_0^\\infty e^{-x} dx = 1
-
-And more and more ...
-
-|| code
-a[0] = 1
-b[0] = |3|
-
-
-|| foo bar
-la di dah
-do day!
-
-| indent
-Pythagoras said that if $a$, $b$, $c$ are the altitude, base, and
-hypotenuse of a right triangle, then $a^2 + b^2 = c^2$.
-"""
-
-
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    ( { sourceText = initialText
+    ( { sourceText = Data.TestDoc.text
       , count = 0
       , windowHeight = flags.height
       , windowWidth = flags.width

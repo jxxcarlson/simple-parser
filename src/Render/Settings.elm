@@ -1,4 +1,4 @@
-module Render.Settings exposing (Settings)
+module Render.Settings exposing (Settings, maxHeadingFontSize)
 
 
 type alias Settings =
@@ -9,3 +9,8 @@ type alias Settings =
     , titleSize : Int
     , width : Int
     }
+
+
+maxHeadingFontSize : Float
+maxHeadingFontSize =
+    32

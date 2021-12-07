@@ -79,12 +79,9 @@ noSuchOrdinaryBlock count settings functionName exprs =
 blockDict : Dict String (Int -> Settings -> List String -> List Expr -> Element MarkupMsg)
 blockDict =
     Dict.fromList
-        [ ( "indent", \count args exprs -> indented count args exprs ) ]
-
-
-indented count settings args exprs =
-    Element.paragraph [ Element.paddingEach { left = 24, right = 0, top = 0, bottom = 0 } ]
-        (List.map (Render.Elm.render count settings) exprs)
+        [ ( "indent", indented )
+        , ( "heading", heading )
+        ]
 
 
 verbatimDict : Dict String (Int -> List String -> String -> Element MarkupMsg)
@@ -93,6 +90,27 @@ verbatimDict =
         [ ( "math", renderDisplayMath )
         , ( "code", renderCode )
         ]
+
+
+heading count settings args exprs =
+    let
+        headingLevel =
+            case List.head args of
+                Nothing ->
+                    1
+
+                Just level ->
+                    String.toFloat level |> Maybe.withDefault 1
+
+        fontSize =
+            Render.Settings.maxHeadingFontSize / sqrt headingLevel |> round
+    in
+    Element.paragraph [ Font.size fontSize ] (List.map (Render.Elm.render count settings) exprs)
+
+
+indented count settings args exprs =
+    Element.paragraph [ Element.paddingEach { left = 24, right = 0, top = 0, bottom = 0 } ]
+        (List.map (Render.Elm.render count settings) exprs)
 
 
 renderDisplayMath count args str =
