@@ -75,10 +75,6 @@ run state =
 
 nextStep : State -> Step State State
 nextStep state =
-    let
-        _ =
-            Debug.log "nextStep, STACK" state.stack
-    in
     case List.Extra.getAt state.tokenIndex state.tokens of
         Nothing ->
             if List.isEmpty state.stack then
@@ -89,12 +85,7 @@ nextStep state =
                 recoverFromError state
 
         Just token ->
-            let
-                _ =
-                    Debug.log "nextStep, TOKEN" token
-            in
             pushToken token { state | tokenIndex = state.tokenIndex + 1 }
-                |> Debug.log "pushToken"
                 |> reduceState
                 |> (\st -> { st | step = st.step + 1 })
                 |> Loop
@@ -178,9 +169,6 @@ push token state =
 reduceState : State -> State
 reduceState state =
     let
-        _ =
-            Debug.log "REDUCIBLE" (M.reducible (state.stack |> Symbol.convertTokens |> List.reverse))
-
         symbols =
             state.stack |> Symbol.convertTokens |> List.reverse
     in

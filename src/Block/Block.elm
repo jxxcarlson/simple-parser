@@ -179,7 +179,6 @@ test : String -> List BlockType
 test s =
     s
         |> Tree.Blocks.fromStringAsParagraphs
-        |> Debug.log "BLOCKS"
         |> List.map classify
 
 
@@ -187,7 +186,6 @@ test2 : String -> List L0Block
 test2 s =
     s
         |> Tree.Blocks.fromStringAsParagraphs
-        |> Debug.log "BLOCKS"
         |> List.map toL0Block
 
 

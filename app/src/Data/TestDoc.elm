@@ -3,11 +3,23 @@ module Data.TestDoc exposing (..)
 
 text =
     """
+one
+  two
+    three!
+    aaaaa
+    b
+"""
+
+
+text1 =
+    """
 
 
 
 | heading 1
 L0 Examples
+
+The examples are illustrative, not exhaustive.
 
 | heading 2
 Inline constructions
@@ -18,8 +30,12 @@ Usual markup stuff
 I [i thought] that this would be a [b good] idea, but I was [red sadly mistaken!].
 
 Note that inline elements can [i [b be composed.]] That was italic
-bold. Let's not be boring: we can also do colors: 
+bold. Let's not be boring: we can also do colors:
 [blue blue stuff] and [red red stuff].  Of course, colors compose also: [i  [b [red Merry Christmas!]]]
+
+
+[image https://ichef.bbci.co.uk/news/976/cpsprodpb/4FB7/production/_116970402_a20-20sahas20barve20-20parrotbill_chavan.jpg]
+
 
 
 
@@ -58,12 +74,43 @@ Code
        c[0] = b[0]
     || x = a + b + c ||
 
+| heading 3
+Ordinary blocks
+
 
 [i An "indent" block:]
 
 | indent
 Pythagoras said that if $a$, $b$, $c$ are the altitude, base, and
 hypotenuse of a right triangle, then $a^2 + b^2 = c^2$.
+
+
+
+[i Blocks can be nested:]
+
+| indent
+An indented block:
+roses are [red red]
+violets are [blue blue]
+
+  | indent
+  This poem is by
+  Mr. J. X. Anonymous
+
+    | indent
+    Let's throw in some math just for kicks:
+
+
+    || math
+    \\int_0^1 x^n dx = \\frac{1}{n+1}
+
+
+  | indent
+  Хватит этого!
+
+
+
+
 
 | heading 2
 Handling Errors

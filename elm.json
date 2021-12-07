@@ -1,7 +1,7 @@
 {
     "type": "application",
     "source-directories": [
-        "src"
+        "src", "/Users/jxxcarlson/dev/bluesky/tree/src"
     ],
     "elm-version": "0.19.1",
     "dependencies": {
@@ -12,24 +12,21 @@
             "elm/parser": "1.1.0",
             "elm-community/list-extra": "8.5.1",
             "elm-community/maybe-extra": "5.2.1",
-            "jxxcarlson/elm-tree-builder": "4.0.0",
             "mdgriffith/elm-ui": "1.1.8",
             "toastal/either": "3.6.3",
             "zwilias/elm-rosetree": "1.5.0"
         },
         "indirect": {
-            "elm/random": "1.0.0",
-            "elm/svg": "1.0.1",
-            "elm/time": "1.0.0",
-            "elm/virtual-dom": "1.0.2",
-            "jxxcarlson/htree": "2.0.1",
-            "jxxcarlson/tree-extra": "1.0.1"
+            "elm/virtual-dom": "1.0.2"
         }
     },
     "test-dependencies": {
         "direct": {
             "elm-explorations/test": "1.2.2"
         },
-        "indirect": {}
+        "indirect": {
+            "elm/random": "1.0.0",
+            "elm/time": "1.0.0"
+        }
     }
 }
