@@ -1,7 +1,7 @@
 module Data.TestDoc exposing (..)
 
 
-text =
+text1 =
     """
 one
   two
@@ -11,7 +11,7 @@ one
 """
 
 
-text1 =
+text =
     """
 
 
