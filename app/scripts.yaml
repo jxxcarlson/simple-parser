@@ -4,6 +4,6 @@
 
      optimize: elm make --optimize src/Main.elm --output=public/Main.js
 
-     live: elm-live ../src/Main.elm -- --output Main.js
+     live:  npx elm-live src/Main.elm -- --output Main.js
 
      loc: cloc --by-file src

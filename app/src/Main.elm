@@ -107,6 +107,9 @@ b[0] = |3|
 la di dah
 do day!
 
+| indent
+Pythagoras said that if $a$, $b$, $c$ are the altitude, base, and
+hypotenuse of a right triangle, then $a^2 + b^2 = c^2$.
 """
 
 
@@ -280,7 +283,7 @@ appWidth_ =
 
 
 editor model =
-    column [ height (px (innerPanelHeight model)), moveUp 28 ]
+    column [ height (px (innerPanelHeight model)), moveUp 4 ]
         [ row [ spacing 12 ]
             []
         , editor_ model

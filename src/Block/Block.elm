@@ -59,7 +59,7 @@ toL0BlockE block =
                 { name = List.head args
                 , args = List.drop 1 args
                 , indent = block.indent
-                , content = Left block.content
+                , content = Left (removeFirstLine block.content)
                 , blockType = blockType
                 , children = []
                 }

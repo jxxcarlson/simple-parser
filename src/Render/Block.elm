@@ -31,12 +31,12 @@ render count settings (L0BlockE { name, args, indent, blockType, content, childr
                 Left str ->
                     case name of
                         Nothing ->
-                            Element.none
+                            noSuchVerbatimBlock "name" str
 
                         Just functionName ->
                             case Dict.get functionName verbatimDict of
                                 Nothing ->
-                                    noSuchBlock functionName str
+                                    noSuchVerbatimBlock functionName str
 
                                 Just f ->
                                     f count args str
@@ -49,7 +49,7 @@ render count settings (L0BlockE { name, args, indent, blockType, content, childr
                 Right exprs ->
                     case name of
                         Nothing ->
-                            Element.none
+                            noSuchOrdinaryBlock count settings "name" exprs
 
                         Just functionName ->
                             case Dict.get functionName blockDict of
@@ -60,20 +60,20 @@ render count settings (L0BlockE { name, args, indent, blockType, content, childr
                                     f count settings args exprs
 
 
-noSuchBlock : String -> String -> Element MarkupMsg
-noSuchBlock functionName content =
-    Element.column []
-        (Element.el [ Font.color (Element.rgb255 180 0 0) ] (Element.text <| "No such block or misspelling of " ++ "\"" ++ functionName ++ "\":")
-            :: List.map (\t -> Element.el [] (Element.text t)) (String.lines content)
-        )
+noSuchVerbatimBlock : String -> String -> Element MarkupMsg
+noSuchVerbatimBlock functionName content =
+    Element.column [ Element.spacing 4 ]
+        [ Element.paragraph [ Font.color (Element.rgb255 180 0 0) ] [ Element.text <| "|| " ++ functionName ++ " ?? " ]
+        , Element.column [ Element.spacing 4 ] (List.map (\t -> Element.el [] (Element.text t)) (String.lines content))
+        ]
 
 
 noSuchOrdinaryBlock : Int -> Settings -> String -> List Expr -> Element MarkupMsg
 noSuchOrdinaryBlock count settings functionName exprs =
-    Element.column []
-        (Element.el [ Font.color (Element.rgb255 180 0 0) ] (Element.text <| "No such block or misspelling of " ++ "\"" ++ functionName ++ "\":")
-            :: List.map (Render.Elm.render count settings) exprs
-        )
+    Element.column [ Element.spacing 4 ]
+        [ Element.paragraph [ Font.color (Element.rgb255 180 0 0) ] [ Element.text <| "| " ++ functionName ++ " ?? " ]
+        , Element.paragraph [] (List.map (Render.Elm.render count settings) exprs)
+        ]
 
 
 blockDict : Dict String (Int -> Settings -> List String -> List Expr -> Element MarkupMsg)
@@ -83,7 +83,7 @@ blockDict =
 
 
 indented count settings args exprs =
-    Element.paragraph [ Element.paddingEach { left = 36, right = 0, top = 0, bottom = 0 } ]
+    Element.paragraph [ Element.paddingEach { left = 24, right = 0, top = 0, bottom = 0 } ]
         (List.map (Render.Elm.render count settings) exprs)
 
 
@@ -96,7 +96,7 @@ verbatimDict =
 
 
 renderDisplayMath count args str =
-    Render.Math.mathText count "id" DisplayMathMode (removeFirstLine str)
+    Render.Math.mathText count "id" DisplayMathMode str
 
 
 renderCode count args str =
@@ -109,7 +109,7 @@ renderCode count args str =
         , Element.spacing 8
         , Element.paddingEach { left = 24, right = 0, top = 0, bottom = 0 }
         ]
-        (List.map (\t -> Element.el [] (Element.text t)) (List.drop 1 <| String.lines (String.trim str)))
+        (List.map (\t -> Element.el [] (Element.text t)) (String.lines (String.trim str)))
 
 
 removeFirstLine : String -> String
