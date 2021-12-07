@@ -1,4 +1,6 @@
-module Render.Settings exposing (Settings, maxHeadingFontSize)
+module Render.Settings exposing (Settings, leftIndentation, maxHeadingFontSize)
+
+import Element
 
 
 type alias Settings =
@@ -14,3 +16,7 @@ type alias Settings =
 maxHeadingFontSize : Float
 maxHeadingFontSize =
     32
+
+
+leftIndentation =
+    Element.paddingEach { left = 18, right = 0, top = 0, bottom = 0 }

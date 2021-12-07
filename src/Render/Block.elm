@@ -109,7 +109,7 @@ heading count settings args exprs =
 
 
 indented count settings args exprs =
-    Element.paragraph [ Element.paddingEach { left = 24, right = 0, top = 0, bottom = 0 } ]
+    Element.paragraph [ Render.Settings.leftIndentation ]
         (List.map (Render.Elm.render count settings) exprs)
 
 

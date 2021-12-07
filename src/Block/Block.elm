@@ -1,4 +1,4 @@
-module Block.Block exposing (BlockType(..), L0BlockE(..), toL0Block, toL0BlockE)
+module Block.Block exposing (BlockType(..), L0BlockE(..), l0Empty, toBlock, toL0Block, toL0BlockE)
 
 import Either exposing (Either(..))
 import Parser.Expression exposing (Expr(..))
@@ -25,6 +25,22 @@ type L0BlockE
         , content : Either String (List Expr)
         , children : List L0BlockE
         }
+
+
+l0Empty =
+    L0BlockE
+        { name = Nothing
+        , args = []
+        , indent = 0
+        , blockType = Paragraph
+        , content = Left "YYY"
+        , children = []
+        }
+
+
+toBlock : L0BlockE -> Block
+toBlock (L0BlockE { indent }) =
+    { indent = indent, content = "XXX" }
 
 
 toL0BlockE : Block -> L0BlockE
