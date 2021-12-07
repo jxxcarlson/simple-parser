@@ -49,7 +49,7 @@ toL0BlockE block =
                 { name = List.head args
                 , args = List.drop 1 args
                 , indent = block.indent
-                , content = Right (Parser.Expression.parse_ block.content)
+                , content = Right (Parser.Expression.parse_ (removeFirstLine block.content))
                 , blockType = blockType
                 , children = []
                 }
@@ -63,6 +63,11 @@ toL0BlockE block =
                 , blockType = blockType
                 , children = []
                 }
+
+
+removeFirstLine : String -> String
+removeFirstLine str_ =
+    str_ |> String.trim |> String.lines |> List.drop 1 |> String.join "\n"
 
 
 toL0Block : Block -> L0Block

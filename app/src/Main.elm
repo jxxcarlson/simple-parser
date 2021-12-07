@@ -94,9 +94,18 @@ More stuff
 And still more stuff
 
 $$
-\\int_0^1 x^n dx = \\frac{1}{n+1}
+\\int_0^\\infty e^{-x} dx = 1
 
 And more and more ...
+
+|| code
+a[0] = 1
+b[0] = |3|
+
+
+|| foo bar
+la di dah
+do day!
 
 """
 
