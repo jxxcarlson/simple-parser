@@ -1,4 +1,4 @@
-module L0 exposing (parse, renderFromAST, renderFromString1, renderFromString2, renderFromString3)
+module L0 exposing (AST, parse, renderFromAST, renderFromString1, renderFromString2, renderFromString3)
 
 import Block.Block
 import Element exposing (Element)
@@ -9,6 +9,10 @@ import Tree exposing (Tree)
 import Tree.Blocks exposing (Block)
 import Tree.BlocksV
 import Tree.Build exposing (Error)
+
+
+type alias AST =
+    List (Tree Block.Block.L0BlockE)
 
 
 renderFromString1 : Int -> Settings -> String -> List (Element MarkupMsg)
@@ -42,7 +46,7 @@ renderFromString3 count settings sourceText =
         |> Result.map (List.map unravel)
 
 
-parse : Int -> Settings -> String -> List (Tree Block.Block.L0BlockE)
+parse : Int -> Settings -> String -> AST
 parse count settings sourceText =
     sourceText
         |> Tree.BlocksV.fromStringAsParagraphs isVerbatimLine
@@ -50,7 +54,7 @@ parse count settings sourceText =
         |> Result.withDefault []
 
 
-renderFromAST : Int -> Settings -> List (Tree Block.Block.L0BlockE) -> List (Element MarkupMsg)
+renderFromAST : Int -> Settings -> AST -> List (Element MarkupMsg)
 renderFromAST count settings ast =
     ast
         |> List.map (Tree.map (Render.Block.render count settings))
