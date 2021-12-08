@@ -105,12 +105,21 @@ heading count settings args exprs =
         fontSize =
             Render.Settings.maxHeadingFontSize / sqrt headingLevel |> round
     in
-    Element.paragraph [ Font.size fontSize ] (List.map (Render.Elm.render count settings) exprs)
+    Element.paragraph [ Font.size fontSize ] (renderWithDefault "| heading" count settings exprs)
+
+
+renderWithDefault : String -> Int -> Settings -> List Expr -> List (Element MarkupMsg)
+renderWithDefault default count settings exprs =
+    if List.isEmpty exprs then
+        [ Element.el [ Font.color Render.Settings.redColor, Font.size 14 ] (Element.text default) ]
+
+    else
+        List.map (Render.Elm.render count settings) exprs
 
 
 indented count settings args exprs =
     Element.paragraph [ Render.Settings.leftIndentation ]
-        (List.map (Render.Elm.render count settings) exprs)
+        (renderWithDefault "| indent" count settings exprs)
 
 
 renderDisplayMath count args str =

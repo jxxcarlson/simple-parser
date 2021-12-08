@@ -1,4 +1,9 @@
-module Render.Settings exposing (Settings, leftIndentation, maxHeadingFontSize)
+module Render.Settings exposing
+    ( Settings
+    , leftIndentation
+    , maxHeadingFontSize
+    , redColor
+    )
 
 import Element
 
@@ -20,3 +25,7 @@ maxHeadingFontSize =
 
 leftIndentation =
     Element.paddingEach { left = 18, right = 0, top = 0, bottom = 0 }
+
+
+redColor =
+    Element.rgb 0.7 0 0

@@ -34,6 +34,8 @@ bold. Let's not be boring: we can also do colors:
 [blue blue stuff] and [red red stuff].  Of course, colors compose also: [i  [b [red Merry Christmas!]]]
 
 
+This is code: `a[0] = 1`; so is this: `$stuff$` and `[x]`
+
 [image https://ichef.bbci.co.uk/news/976/cpsprodpb/4FB7/production/_116970402_a20-20sahas20barve20-20parrotbill_chavan.jpg]
 
 
