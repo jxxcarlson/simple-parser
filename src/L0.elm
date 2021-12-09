@@ -6,7 +6,6 @@ import Render.Block
 import Render.Msg exposing (MarkupMsg)
 import Render.Settings exposing (Settings)
 import Tree exposing (Tree)
-import Tree.Blocks exposing (Block)
 import Tree.BlocksV
 import Tree.Build exposing (Error)
 
