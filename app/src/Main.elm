@@ -14,6 +14,7 @@ import Html.Events exposing (keyCode, on, onClick, onInput)
 import Json.Decode
 import L0
 import Process
+import Render.L0
 import Render.Msg exposing (MarkupMsg)
 import Render.Settings exposing (Settings)
 import Task exposing (Task)
@@ -377,18 +378,15 @@ renderedText model =
 render1 : String -> Int -> List (Element Msg)
 render1 sourceText count =
     sourceText
-        |> L0.renderFromString1 count defaultSettings
+        |> Render.L0.renderFromString count defaultSettings
         |> List.map (Element.map Render)
 
 
 render : String -> Int -> List (Element Msg)
 render sourceText count =
-    case L0.renderFromString3 count defaultSettings sourceText of
-        Ok rt ->
-            List.map (Element.map Render) rt
-
-        _ ->
-            [ Element.text "Oops, error rendering your text" ]
+    sourceText
+        |> Render.L0.renderFromString count defaultSettings
+        |> List.map (Element.map Render)
 
 
 htmlId str =
